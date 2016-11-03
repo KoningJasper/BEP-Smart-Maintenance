@@ -39,7 +39,8 @@ namespace SmartMaintenance.MonteCarlo
         {
             return _ConstantInputs.TaskList.Select(task => new VariableInput()
             {
-                Interval = new Random().NextDouble()
+                Interval = new Random().NextDouble(),
+                Task = task
             }).ToArray();
         }
 

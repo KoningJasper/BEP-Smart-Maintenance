@@ -4,7 +4,7 @@ namespace SmartMaintenance.Models
 {
     internal class LocationTime
     {
-        public TimeSpan Time { get; set; }
+        public DateTime DateTime { get; set; }
         public Location Location { get; set; }
     }
 }
