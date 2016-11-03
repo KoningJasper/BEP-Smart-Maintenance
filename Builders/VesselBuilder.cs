@@ -23,12 +23,12 @@ namespace SmartMaintenance.Builders
                 else
                     return null;
             });
-            var locationTimes = (from x in excel.Worksheet<LocationTime>() select x).ToArray();
+            var locationTimes = (from x in excel.Worksheet<LocationTime>() select x).ToList();
 
             return new Vessel()
             {
                 RequiredReliability = 0.99,
-                LocationOverTime = locationTimes
+                LocationOverTime = locationTimes.Where(lt => lt.DateTime.Year != 0001).ToArray()
             };
         }
     }

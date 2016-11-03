@@ -14,8 +14,13 @@ namespace SmartMaintenance
             // Execute MC.
             MonteCarloResult result = new MonteCarlo.MonteCarlo(1000, ConstantInputBuilder.Build()).Execute();
 
-            Console.WriteLine($"Result found at loop: {result.FoundAtLoop}.");
-            Console.WriteLine($"With a reliability of: {result.AdjustedReliability}.");
+            Console.WriteLine($"Found a reliability of: {result.AdjustedReliability}.");
+            Console.WriteLine($"With inputs: ");
+            foreach (var input in result.Inputs)
+            {
+                Console.WriteLine($"{input.Task.Name} : {input.Interval}");
+            }
+            
 
             // Don't immediately exit.
             Console.WriteLine("Press any key to quit.");

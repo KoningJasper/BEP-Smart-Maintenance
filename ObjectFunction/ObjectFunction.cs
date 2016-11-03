@@ -14,9 +14,9 @@ namespace SmartMaintenance.ObjectFunction
                 DateTime date = DateTime.Now + TimeSpan.FromDays(input.Interval*input.Task.MaxIntervalWeeks.Value*7);
 
                 // Check if location is correct.
-                if (constantInputs.Vessel.LocationOverTime.Any(x => x.DateTime >= date))
+                if (constantInputs.Vessel.LocationOverTime.Any(x => x.DateTime <= date))
                 {
-                    LocationTime locationTime = constantInputs.Vessel.LocationOverTime.First(x => x.DateTime >= date);
+                    LocationTime locationTime = constantInputs.Vessel.LocationOverTime.Last(x => x.DateTime <= date);
 
                     if (locationTime.Location != input.Task.Location)
                         // Invalid location.

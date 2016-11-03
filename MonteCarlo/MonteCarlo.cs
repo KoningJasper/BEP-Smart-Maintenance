@@ -26,7 +26,6 @@ namespace SmartMaintenance.MonteCarlo
                     bestResult = new MonteCarloResult()
                     {
                         AdjustedReliability = adjustedReliability,
-                        FoundAtLoop = i,
                         Inputs = inputs
                     };
             }
