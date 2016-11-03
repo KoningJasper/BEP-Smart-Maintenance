@@ -27,7 +27,7 @@ namespace SmartMaintenance.Builders
 
             return new Vessel()
             {
-                RequiredReliability = 0.99,
+                RequiredReliability = 0.10,
                 LocationOverTime = locationTimes.Where(lt => lt.DateTime.Year != 0001).ToArray()
             };
         }

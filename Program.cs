@@ -10,9 +10,10 @@ namespace SmartMaintenance
         static void Main(string[] args)
         {
             Console.WriteLine("Start Monte-Carlo generation.");
-
+            Console.WriteLine("Simulating 365 days, with 10 hour running precision.");
+            
             // Execute MC.
-            MonteCarloResult result = new MonteCarlo.MonteCarlo(1000, ConstantInputBuilder.Build()).Execute();
+            MonteCarloResult result = new MonteCarlo.MonteCarlo(1000, ConstantInputBuilder.Build(), TimeSpan.FromDays(365)).Execute();
 
             Console.WriteLine($"Found a reliability of: {result.AdjustedReliability}.");
             Console.WriteLine($"With inputs: ");

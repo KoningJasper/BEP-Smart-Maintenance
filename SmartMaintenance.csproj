@@ -76,6 +76,7 @@
     <Compile Include="MonteCarlo\MonteCarlo.cs" />
     <Compile Include="MonteCarlo\MonteCarloResult.cs" />
     <Compile Include="ObjectFunction\ObjectFunction.cs" />
+    <Compile Include="ObjectFunction\TsaiModel.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

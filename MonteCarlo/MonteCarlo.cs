@@ -10,6 +10,7 @@ namespace SmartMaintenance.MonteCarlo
         // Private variables.
         private readonly int _NumberOfLoops;
         private readonly ConstantInputs _ConstantInputs;
+        private readonly TimeSpan _SimulationTime;
 
         // Public methods
         public MonteCarloResult Execute()
@@ -19,10 +20,10 @@ namespace SmartMaintenance.MonteCarlo
             for (int i = 0; i <= _NumberOfLoops; i++)
             {
                 VariableInput[] inputs = GenerateRandomVariableInputs();
-                double adjustedReliability = new ObjectFunction.ObjectFunction().Evaluate(_ConstantInputs, inputs);
+                double adjustedReliability = new ObjectFunction.ObjectFunction().Evaluate(_ConstantInputs, inputs, _SimulationTime);
 
                 // Check if it is better than the previous best result.
-                if (adjustedReliability > bestResult.AdjustedReliability)
+                if (adjustedReliability >= bestResult.AdjustedReliability)
                     bestResult = new MonteCarloResult()
                     {
                         AdjustedReliability = adjustedReliability,
@@ -44,10 +45,11 @@ namespace SmartMaintenance.MonteCarlo
         }
 
         // Instance
-        public MonteCarlo(int noLoops, ConstantInputs constants)
+        public MonteCarlo(int noLoops, ConstantInputs constants, TimeSpan simulationTime)
         {
-            _NumberOfLoops = noLoops;
+            _NumberOfLoops  = noLoops;
             _ConstantInputs = constants;
+            _SimulationTime = simulationTime;
         }
     }
 }
