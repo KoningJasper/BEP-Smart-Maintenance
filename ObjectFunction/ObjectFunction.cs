@@ -1,12 +1,14 @@
-﻿using SmartMaintenance.Models;
+﻿using System;
+
+using SmartMaintenance.Models;
 
 namespace SmartMaintenance.ObjectFunction
 {
-    internal static class ObjectFunction
+    internal class ObjectFunction
     {
-        public static int Evaluate(ConstantInputs constantInputs, VariableInput[] variableInputs)
+        public double Evaluate(ConstantInputs constantInputs, VariableInput[] variableInputs)
         {
-            return 1;
+            return new Random().NextDouble();
         }
     }
 }

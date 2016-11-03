@@ -19,7 +19,7 @@ namespace SmartMaintenance.MonteCarlo
             for (int i = 0; i <= _NumberOfLoops; i++)
             {
                 VariableInput[] inputs = GenerateRandomVariableInputs();
-                decimal adjustedReliability = ObjectFunction.ObjectFunction.Evaluate(_ConstantInputs, inputs);
+                double adjustedReliability = new ObjectFunction.ObjectFunction().Evaluate(_ConstantInputs, inputs);
 
                 // Check if it is better than the previous best result.
                 if (adjustedReliability > bestResult.AdjustedReliability)
