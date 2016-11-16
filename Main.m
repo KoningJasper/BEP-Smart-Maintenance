@@ -11,11 +11,21 @@ VesselLocations = DataReader('Data/VesselLocations.xls');
 
 % Set params according to data
 t_max = (length(VesselLocations) - 1) * t_p; % in h
-noComponents = size(Components, 1);
-noTasks = size(Tasks, 1);
 
 % Monte-Carlo
-for n = 1:1
+Output_number = 0;
+
+for n = 1:100
     inputs = GenerateRandomInput(Tasks);
-    ObjectFunction(inputs, t_max, t_p, noComponents, Components, noTasks, Tasks, VesselLocations);
+    inputs_size = length(inputs);
+    for m = 1:inputs_size
+        [beta, eta] = FindWeibullOfComponentByTaskId(inputs{m, 1}, Tasks, Components);
+    end
+    % [Output_objective,interval] = Objective_Function (....)
+    if Output_objective => Output
+    Output_number = Output_objective;
+    Output = interval;
+    end
 end
+
+% Output
