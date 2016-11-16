@@ -1,23 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using SmartMaintenance.Models;
 
-namespace SmartMaintenance.ObjectFunction
+namespace SmartMaintenance.Functions
 {
     internal static class TsaiModel
     {
-        public class TimeSerie
-        {
-            public double Step { get; set; }
-            public double Probability { get; set; }
-        }
-
-        public class InputWithDate : VariableInput
-        {
-            public DateTime Date { get; set; }
-        }
-
         /// <summary>
         /// Evaluate a single component using the TsaiModel
         /// </summary>
@@ -26,7 +16,7 @@ namespace SmartMaintenance.ObjectFunction
         {
             var convertedInputs = inputs.Select(x => new InputWithDate()
             {
-                Date = ObjectFunction.GetDate(x),
+                Date = Functions.ObjectFunction.GetDate(x),
                 Interval = x.Interval,
                 Task = x.Task
             });

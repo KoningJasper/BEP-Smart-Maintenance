@@ -8,7 +8,7 @@ namespace SmartMaintenance.Builders
 {
     internal static class ComponentBuilder
     {
-        private const string ComponentXLSXFileName = "../../Data/Components.xlsx";
+        private const string ComponentXLSXFileName = "../../../Data/Components.xlsx";
 
         public static Component[] Build()
         {

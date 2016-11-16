@@ -8,7 +8,7 @@ namespace SmartMaintenance.Builders
 {
     internal static class TaskBuilder
     {
-        private const string TaskXLSXFileName = "../../Data/Tasks.xlsx";
+        private const string TaskXLSXFileName = "../../../Data/Tasks.xlsx";
 
         public static Task[] Build()
         {

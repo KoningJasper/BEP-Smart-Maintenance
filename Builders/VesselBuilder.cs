@@ -6,9 +6,9 @@ using SmartMaintenance.Models;
 
 namespace SmartMaintenance.Builders
 {
-    internal class VesselBuilder
+    internal static class VesselBuilder
     {
-        private const string VesselLocationTimeXLSXFileName = "../../Data/VesselLocations.xlsx";
+        private const string VesselLocationTimeXLSXFileName = "../../../Data/VesselLocations.xlsx";
         public static Vessel Build()
         {
             var excel = new ExcelQueryFactory

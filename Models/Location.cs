@@ -1,6 +1,6 @@
 ﻿namespace SmartMaintenance.Models
 {
-    internal enum Location
+    public enum Location
     {
         Sailing,
         Port,

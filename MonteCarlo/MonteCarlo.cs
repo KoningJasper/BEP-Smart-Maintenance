@@ -1,26 +1,22 @@
 ﻿using System;
 using System.Linq;
 
+using SmartMaintenance.Functions;
 using SmartMaintenance.Models;
 
 namespace SmartMaintenance.MonteCarlo
 {
-    internal class MonteCarlo
+    internal static class MonteCarlo
     {
-        // Private variables.
-        private readonly int _NumberOfLoops;
-        private readonly ConstantInputs _ConstantInputs;
-        private readonly TimeSpan _SimulationTime;
-
         // Public methods
-        public MonteCarloResult Execute()
+        public static MonteCarloResult Execute(int noLoops, ConstantInputs constants, TimeSpan simulationTime)
         {
             MonteCarloResult bestResult = new MonteCarloResult();
 
-            for (int i = 0; i <= _NumberOfLoops; i++)
+            for (int i = 0; i <= noLoops; i++)
             {
-                VariableInput[] inputs = GenerateRandomVariableInputs();
-                double adjustedReliability = new ObjectFunction.ObjectFunction().Evaluate(_ConstantInputs, inputs, _SimulationTime);
+                VariableInput[] inputs = GenerateRandomVariableInputs(constants);
+                double adjustedReliability = ObjectFunction.Evaluate(constants, inputs, simulationTime);
 
                 // Check if it is better than the previous best result.
                 if (adjustedReliability >= bestResult.AdjustedReliability)
@@ -35,21 +31,13 @@ namespace SmartMaintenance.MonteCarlo
         }
 
         // Private methods
-        private VariableInput[] GenerateRandomVariableInputs()
+        private static VariableInput[] GenerateRandomVariableInputs(ConstantInputs constants)
         {
-            return _ConstantInputs.TaskList.Select(task => new VariableInput()
+            return constants.TaskList.Select(task => new VariableInput()
             {
                 Interval = new Random().NextDouble(),
                 Task = task
             }).ToArray();
-        }
-
-        // Instance
-        public MonteCarlo(int noLoops, ConstantInputs constants, TimeSpan simulationTime)
-        {
-            _NumberOfLoops  = noLoops;
-            _ConstantInputs = constants;
-            _SimulationTime = simulationTime;
         }
     }
 }

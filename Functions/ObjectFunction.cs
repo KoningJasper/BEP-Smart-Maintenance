@@ -4,11 +4,11 @@ using System.Linq;
 
 using SmartMaintenance.Models;
 
-namespace SmartMaintenance.ObjectFunction
+namespace SmartMaintenance.Functions
 {
-    internal class ObjectFunction
+    internal static class ObjectFunction
     {
-        public double Evaluate(ConstantInputs constantInputs, VariableInput[] variableInputs, TimeSpan simulationTime)
+        public static double Evaluate(ConstantInputs constantInputs, VariableInput[] variableInputs, TimeSpan simulationTime)
         {
             // Input verification
             foreach (var input in variableInputs)
@@ -29,18 +29,22 @@ namespace SmartMaintenance.ObjectFunction
             }
 
             // Component Verification
-            List<TsaiModel.TimeSerie> sim = new List<TsaiModel.TimeSerie>();
+            List<TimeSerie> sim = new List<TimeSerie>();
             foreach (Component comp in constantInputs.Components)
             {
-                // Evaluate reliability
-                var reliabilityOvertime = TsaiModel.Tsai(simulationTime.TotalHours, 10, comp, variableInputs);
+                List<TimeSerie> componentReliability = new List<TimeSerie>();
 
-                //if (reliabilityOvertime.Any(rt => rt.Probability <= constantInputs.Vessel.RequiredReliability))
-                //{
-                //    // Console.WriteLine("Lower than required reliability");
-                //    return 0;
-                //}
-
+                // Simulate over time.
+                int totalSteps = (int) Math.Ceiling(simulationTime.TotalHours / 10);
+                for (int i = 0; i <= totalSteps; i++)
+                {
+                    var ts = new TimeSerie()
+                    {
+                        Step = i,
+                        Probability = Matlab.Matlab.TsaiReliability(comp, i);
+                    };
+                }
+                
                 if (!sim.Any())
                     sim = reliabilityOvertime.ToList();
                 else
