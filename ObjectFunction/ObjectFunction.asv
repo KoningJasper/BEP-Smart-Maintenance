@@ -1,14 +1,13 @@
 function [ Output_Objective, interval] = ObjectFunction(input, t_max, t_p, no_components, components, no_maintenance_tasks, tasks, vesselLocation)
 
 % Integrate over Time %
-lambdaOverTime = ones(t_max + 1, no_components);
+failure_over_time = ones(t_max + 1, no_components);
 Output_Objective = 0;
 plotObj = ones(t_max + 1);
 plotLambda = ones(t_max + 1);
 
 for i = 2:t_max + 1
     lambda_system = 1;
-    
     for n = 1:no_components
         m1 = 0;
         [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
@@ -44,13 +43,14 @@ for i = 2:t_max + 1
             end
         end
         
-        lambda_component = 1 - FailureRateN(t_p, beta, eta, m1, 1 - lambdaOverTime(i - 1, n));
+        lambda_component = FailureRateN(t_p, beta, eta, m1, failure_over_time(i - 1, n));
         lambda_system = lambda_system * lambda_component; 
-        lambdaOverTime(i, n) = lambda_component;
+        failure_over_time(i, n) = lambda_component;
+        
     end
     
     plotLambda(i) = lambda_system;
-    Output_Objective = Output_Objective + lambda_system * t_p;
+    Output_Objective = Output_Objective + (1 - lambda_system ) * t_p;
     plotObj(i) = Output_Objective;
     
 end
