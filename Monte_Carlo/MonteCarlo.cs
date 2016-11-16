@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Linq;
-
 using SmartMaintenance.Functions;
 using SmartMaintenance.Models;
 
-namespace SmartMaintenance.MonteCarlo
+namespace SmartMaintenance.Monte_Carlo
 {
     internal static class MonteCarlo
     {

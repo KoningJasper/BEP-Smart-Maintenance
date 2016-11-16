@@ -1,6 +1,6 @@
 ﻿using SmartMaintenance.Models;
 
-namespace SmartMaintenance.MonteCarlo
+namespace SmartMaintenance.Monte_Carlo
 {
     internal class MonteCarloResult
     {
