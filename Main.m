@@ -14,5 +14,9 @@ t_max = (length(VesselLocations) - 1) * t_p; % in h
 
 % Monte-Carlo
 for n = 1:100
-    input = GenerateRandomInput(Tasks);
+    inputs = GenerateRandomInput(Tasks);
+    inputs_size = size(inputs);
+    for m = 1:inputs_size(1,1)
+        [beta, eta] = FindWeibullOfComponentByTaskId(inputs{m, 1}, Tasks, Components);
+    end
 end
