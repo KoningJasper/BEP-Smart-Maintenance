@@ -42,13 +42,17 @@ for i = 2:no_time_steps + 1
         
         for m = 1:size(relevant_maintenance_tasks, 1)
             interval              = input{m,1};
-            task_id               = relevant_maintenance_tasks{m, 1};
-            task                  = LocateTaskById(task_id, relevant_maintenance_tasks);
+            task                  = relevant_maintenance_tasks(m, :);
             timeOfExecution       = floor(interval * task{1, 6});
             endTimeMaintenance    = timeOfExecution + task{1, 4};
             locationOfExecution   = task{1,3};
             affected_component_id = task{1, 7};
             
+            % Empty check
+            if(isempty(task{1,1}))
+                continue;
+            end;
+                     
             % Check correct component
             if(component_id ~= affected_component_id)
                 continue;
