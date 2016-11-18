@@ -3,12 +3,12 @@ function [ Output_Objective, plotLambda, plotObj, lambdaOverTime] = ObjectFuncti
 % Pre-Calc %
 no_components = size(components, 1);
 no_tasks      = size(tasks, 1);
-no_time_steps = t_max;
+no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-plotObj        = ones(t_max + 1);
-plotLambda     = ones(t_max + 1);
-lambdaOverTime = ones(t_max + 1, no_components);
+plotObj        = ones(no_time_steps + 1);
+plotLambda     = ones(no_time_steps + 1);
+lambdaOverTime = ones(no_time_steps + 1, no_components);
 
 % Pre-check %
 interval = cell2mat(input) .* cell2mat(tasks(:, 6));
@@ -27,11 +27,9 @@ end
 
 % Integrate over Time %
 Output_Objective = 0;
-plotObj          = ones(t_max + 1);
-plotLambda       = ones(t_max + 1);
 m1               = zeros(no_components, 1);
 
-for i = 2:t_max + 1
+for i = 2:no_time_steps + 1
     lambda_system = 1;
     
     for n = 1:no_components
