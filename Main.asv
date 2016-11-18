@@ -1,7 +1,5 @@
 % Clear
 clear all;
-close all;
-clc;
 
 % Parameters
 t_p   = 1; % Time Step (h)
@@ -56,12 +54,6 @@ title('Adjusted availability over time');
 xlabel('Time (h)');
 ylabel('Adjusted availability (-)');
 
-for i = 1:size(relPerComp, 2)
-    figure;
-    plot(relPerComp(:, i));
-    title(['Reliability over time for component: ', Components{i, 2}]);
-    xlabel('Time (h)');
-    ylabel('Reliability (-)');
-end
+
 
 % END Output %

@@ -1,4 +1,4 @@
-function [ Output_Objective, plotLambda, plotObj] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation)
+function [ Output_Objective, plotLambda, plotObj, lambdaOverTime] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation)
 
 % Pre-Calc %
 no_components = size(components, 1);
@@ -6,8 +6,9 @@ no_tasks      = size(tasks, 1);
 no_time_steps = t_max;
 
 % Pre-alloc %
-plotObj       = ones(t_max + 1);
-plotLambda    = ones(t_max + 1);
+plotObj        = ones(t_max + 1);
+plotLambda     = ones(t_max + 1);
+lambdaOverTime = ones(t_max + 1, no_components);
 
 % Pre-check %
 interval = cell2mat(input) .* cell2mat(tasks(:, 6));
@@ -18,14 +19,13 @@ for i = 1:no_tasks
         tijdstip = floor(j*interval(i));
         if vesselLocation{tijdstip, 2} == 0  %0 is op zee, 1 is in de haven
             Output_Objective = 0;
-            disp(['Deze is stuk, pre-check, bij tijdstip: ', num2str(tijdstip), '.']);
+            %disp(['Deze is stuk, pre-check, bij tijdstip: ', num2str(tijdstip), '.']);
             return
         end
     end
 end
 
 % Integrate over Time %
-lambdaOverTime   = ones(t_max + 1, no_components);
 Output_Objective = 0;
 plotObj          = ones(t_max + 1);
 plotLambda       = ones(t_max + 1);
@@ -63,7 +63,7 @@ for i = 2:t_max + 1
                 
                 if(location ~= locationOfExecution)
                     Output_Objective = 0;
-                    disp(['De pre-check is stuk bij tijdstip  ', num2str(i), 'h en interval ', num2str(interval), '.']);
+                    %disp(['De pre-check is stuk bij tijdstip  ', num2str(i), 'h en interval ', num2str(interval), '.']);
                     return;
                 end
                 
@@ -73,7 +73,7 @@ for i = 2:t_max + 1
                 % Set m1 after maintenance
                 if(i == endTimeMaintenance)
                     m1(n, 1) = task{1, 8};
-                    m2       = task{1, 9};
+                    m2       = m2 + task{1, 9};
                 end
             else
                 continue;
