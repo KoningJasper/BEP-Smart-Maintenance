@@ -1,5 +1,18 @@
 function [ Output_Objective, interval] = ObjectFunction(input, t_max, t_p, no_components, components, no_maintenance_tasks, tasks, vesselLocation)
 
+% Pre-check %
+interval = input .* tasks(:, 6);
+for i = 1:no_tasks
+    no_executed_maintenance = floor(no_time_steps/interval(i));
+
+    for j = 1:no_executed_maintenance
+        if ship_schedule(j*interval)== 0  %0 is op zee, 1 is in de haven
+            Output_Objective = 0;
+            return
+        end
+    end
+end
+
 % Integrate over Time %
 lambdaOverTime = ones(t_max + 1, no_components);
 Output_Objective = 0;
