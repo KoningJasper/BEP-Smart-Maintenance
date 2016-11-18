@@ -14,20 +14,22 @@ t_max = (length(VesselLocations) - 1) * t_p; % in h
 
 % Monte-Carlo
 Output_number = 0;
+Output = zeros(size(Tasks, 1), 1);
 
-for n = 1:100
+for n = 1:50
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, interval] = ObjectFunction(inputs, t_max, t_p, noComponents, Components, noTasks, Tasks, VesselLocations);
+    [Output_objective, interval] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations);
     
     % Monte-Carlo check better solution.
-    if Output_objective >= Output
+    if Output_objective >= Output_number
         Output_number = Output_objective;
-        Output = interval;
+        Output = inputs;
     end
 end
 
 % Output
-output_number
+Output_number
+Output

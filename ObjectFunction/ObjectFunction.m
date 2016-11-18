@@ -1,12 +1,17 @@
-function [ Output_Objective, interval] = ObjectFunction(input, t_max, t_p, no_components, components, no_maintenance_tasks, tasks, vesselLocation)
+function [ Output_Objective, interval] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation)
+
+% Pre-Calc %
+no_components = size(components, 1);
+no_tasks      = size(tasks, 1);
+no_time_steps = t_max;
 
 % Pre-check %
-interval = input .* tasks(:, 6);
+interval = input{:} .* tasks{:, 6};
 for i = 1:no_tasks
     no_executed_maintenance = floor(no_time_steps/interval(i));
 
     for j = 1:no_executed_maintenance
-        if ship_schedule(j*interval)== 0  %0 is op zee, 1 is in de haven
+        if vesselLocation{floor(j*interval(i)), 2} == 0  %0 is op zee, 1 is in de haven
             Output_Objective = 0;
             return
         end
@@ -27,10 +32,12 @@ for i = 2:t_max + 1
         [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
         
         component_id = components{n,1};
-        for m = 1:no_maintenance_tasks
-            interval = input{m, 2};
-            task_id = tasks{m, 1};
-            task = LocateTaskById(task_id, tasks);
+        relevant_maintenance_tasks = FindTasksByComponentId(component_id, tasks);
+        
+        for m = 1:size(relevant_maintenance_tasks, 1)
+            interval = input{m,1};
+            task_id = relevant_maintenance_tasks{m, 1};
+            task = LocateTaskById(task_id, relevant_maintenance_tasks);
             timeOfExecution = floor(interval * task{1, 6});
             locationOfExecution = task{1,3};
             
