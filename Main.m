@@ -18,7 +18,9 @@ Output_number = 0;
 Output        = zeros(size(Tasks, 1), 1);
 plotL         = [];
 plotO         = [];
+% END INIT %
 
+% Execute MC %
 for n = 1:50
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
@@ -34,10 +36,11 @@ for n = 1:50
         plotO         = plotObj;
     end
 end
+% END Execute MC %
 
-% Output
-Output_number
-Output
+% Output %
+disp(['De gevonden maximum adjusted availability is ', num2str(Output_number), ' bij een de volgende intervallen: ']);
+disp(Output);
 figure;
 plot(plotL);
 title('Reliability over time')
@@ -48,3 +51,4 @@ plot(plotO);
 title('Adjusted availability over time');
 xlabel('Time (h)');
 ylabel('Adjusted availability (-)');
+% END Output %

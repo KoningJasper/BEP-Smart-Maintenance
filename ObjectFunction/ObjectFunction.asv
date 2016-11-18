@@ -4,8 +4,10 @@ function [ Output_Objective, plotLambda, plotObj] = ObjectFunction(input, t_max,
 no_components = size(components, 1);
 no_tasks      = size(tasks, 1);
 no_time_steps = t_max;
-plotLambda    = 0;
-p
+
+% Pre-alloc %
+plotObj       = ones(t_max + 1);
+plotLambda    = ones(t_max + 1);
 
 % Pre-check %
 interval = input{:} .* tasks{:, 6};
@@ -23,16 +25,16 @@ for i = 1:no_tasks
 end
 
 % Integrate over Time %
-lambdaOverTime = ones(t_max + 1, no_components);
+lambdaOverTime   = ones(t_max + 1, no_components);
 Output_Objective = 0;
-plotObj = ones(t_max + 1);
-plotLambda = ones(t_max + 1);
+plotObj          = ones(t_max + 1);
+plotLambda       = ones(t_max + 1);
+m1               = 0;
 
 for i = 2:t_max + 1
     lambda_system = 1;
     
     for n = 1:no_components
-        m1 = 0;
         [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
         
         component_id = components{n,1};
@@ -79,9 +81,9 @@ for i = 2:t_max + 1
         lambda_system = lambda_system * lambda_component; 
         lambdaOverTime(i, n) = lambda_component;
     end
-    
-    plotLambda(i) = lambda_system;
+
     Output_Objective = Output_Objective + lambda_system * t_p;
+    plotLambda(i) = lambda_system;
     plotObj(i) = Output_Objective;  
 end
 

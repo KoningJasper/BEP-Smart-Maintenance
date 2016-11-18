@@ -10,7 +10,7 @@ plotObj       = ones(t_max + 1);
 plotLambda    = ones(t_max + 1);
 
 % Pre-check %
-interval = input{:} .* tasks{:, 6};
+interval = cell2mat(input) .* cell2mat(tasks(:, 6));
 for i = 1:no_tasks
     no_executed_maintenance = floor(no_time_steps/interval(i));
 
@@ -25,20 +25,22 @@ for i = 1:no_tasks
 end
 
 % Integrate over Time %
-lambdaOverTime = ones(t_max + 1, no_components);
+lambdaOverTime   = ones(t_max + 1, no_components);
 Output_Objective = 0;
-plotObj = ones(t_max + 1);
-plotLambda = ones(t_max + 1);
+plotObj          = ones(t_max + 1);
+plotLambda       = ones(t_max + 1);
+m1               = zeros(no_components, 1);
 
 for i = 2:t_max + 1
     lambda_system = 1;
     
     for n = 1:no_components
-        m1 = 0;
         [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
         
         component_id = components{n,1};
         relevant_maintenance_tasks = FindTasksByComponentId(component_id, tasks);
+        
+        m2 = 0;
         
         for m = 1:size(relevant_maintenance_tasks, 1)
             interval              = input{m,1};
@@ -70,21 +72,32 @@ for i = 2:t_max + 1
                 
                 % Set m1 after maintenance
                 if(i == endTimeMaintenance)
-                    m1 = task{1, 8};
+                    m1(n, 1) = task{1, 8};
+                    m2       = task{1, 9};
                 end
             else
                 continue;
             end
         end
         
-        lambda_component = 1 - FailureRateN(t_p, beta, eta, m1, 1 - lambdaOverTime(i - 1, n));
-        lambda_system = lambda_system * lambda_component; 
+        % Recalculate reliability
+        lambda_component = 1 - FailureRateN(t_p, beta, eta, m1(n, 1), 1 - lambdaOverTime(i - 1, n));
+        
+        % Add (m2) jump
+        if(m2 + lambda_component >= 1)
+            lambda_component = 1;
+        else
+            lambda_component = lambda_component + m2;
+        end
+        
+        % Calculate system reliability
+        lambda_system        = lambda_system * lambda_component; 
         lambdaOverTime(i, n) = lambda_component;
     end
-    
-    plotLambda(i) = lambda_system;
+
     Output_Objective = Output_Objective + lambda_system * t_p;
-    plotObj(i) = Output_Objective;  
+    plotLambda(i)    = lambda_system;
+    plotObj(i)       = Output_Objective;  
 end
 
 plotLambda = plotLambda(:, 1);
