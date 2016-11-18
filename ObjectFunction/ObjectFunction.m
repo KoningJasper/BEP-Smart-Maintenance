@@ -1,9 +1,13 @@
-function [ Output_Objective, interval] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation)
+function [ Output_Objective, plotLambda, plotObj] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation)
 
 % Pre-Calc %
 no_components = size(components, 1);
 no_tasks      = size(tasks, 1);
 no_time_steps = t_max;
+
+% Pre-alloc %
+plotObj       = ones(t_max + 1);
+plotLambda    = ones(t_max + 1);
 
 % Pre-check %
 interval = input{:} .* tasks{:, 6};
@@ -37,12 +41,12 @@ for i = 2:t_max + 1
         relevant_maintenance_tasks = FindTasksByComponentId(component_id, tasks);
         
         for m = 1:size(relevant_maintenance_tasks, 1)
-            interval = input{m,1};
-            task_id = relevant_maintenance_tasks{m, 1};
-            task = LocateTaskById(task_id, relevant_maintenance_tasks);
-            timeOfExecution = floor(interval * task{1, 6});
-            locationOfExecution = task{1,3};
-            
+            interval              = input{m,1};
+            task_id               = relevant_maintenance_tasks{m, 1};
+            task                  = LocateTaskById(task_id, relevant_maintenance_tasks);
+            timeOfExecution       = floor(interval * task{1, 6});
+            endTimeMaintenance    = timeOfExecution + task{1, 4};
+            locationOfExecution   = task{1,3};
             affected_component_id = task{1, 7};
             
             % Check correct component
@@ -50,8 +54,8 @@ for i = 2:t_max + 1
                 continue;
             end
             
-            % check execution
-            if(timeOfExecution == i)
+            % Check if maintenance is ongoing
+            if(timeOfExecution <= i && i <= endTimeMaintenance)
                 % Check location
                 location = vesselLocation{i, 2};
                 
@@ -61,7 +65,13 @@ for i = 2:t_max + 1
                     return;
                 end
                 
-                m1 = task{1, 8};
+                % Reduce availability with working time
+                Output_Objective = Output_Objective - t_p;
+                
+                % Set m1 after maintenance
+                if(i == endTimeMaintenance)
+                    m1 = task{1, 8};
+                end
             else
                 continue;
             end
@@ -74,12 +84,8 @@ for i = 2:t_max + 1
     
     plotLambda(i) = lambda_system;
     Output_Objective = Output_Objective + lambda_system * t_p;
-    plotObj(i) = Output_Objective;
-    
+    plotObj(i) = Output_Objective;  
 end
 
-figure;
-plot(plotLambda(:, 1));
-
-figure;
-plot(plotObj(:, 1));
+plotLambda = plotLambda(:, 1);
+plotObj    = plotObj(:, 1);
