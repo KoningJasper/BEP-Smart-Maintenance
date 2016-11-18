@@ -27,7 +27,7 @@ end
 
 % Integrate over Time %
 Output_Objective = 0;
-m1               = zeros(no_components, 1);
+m1               = ones(no_components, 1);
 
 for i = 2:no_time_steps + 1
     lambda_system = 1;
