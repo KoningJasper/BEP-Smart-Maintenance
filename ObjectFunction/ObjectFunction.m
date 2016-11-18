@@ -11,8 +11,10 @@ for i = 1:no_tasks
     no_executed_maintenance = floor(no_time_steps/interval(i));
 
     for j = 1:no_executed_maintenance
-        if vesselLocation{floor(j*interval(i)), 2} == 0  %0 is op zee, 1 is in de haven
+        tijdstip = floor(j*interval(i));
+        if vesselLocation{tijdstip, 2} == 0  %0 is op zee, 1 is in de haven
             Output_Objective = 0;
+            disp(['Deze is stuk, pre-check, bij tijdstip: ', num2str(tijdstip), '.']);
             return
         end
     end
@@ -55,6 +57,7 @@ for i = 2:t_max + 1
                 
                 if(location ~= locationOfExecution)
                     Output_Objective = 0;
+                    disp(['De pre-check is stuk bij tijdstip  ', num2str(i), 'h en interval ', num2str(interval), '.']);
                     return;
                 end
                 
