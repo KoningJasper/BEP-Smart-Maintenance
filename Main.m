@@ -16,16 +16,18 @@ t_max = (length(VesselLocations) - 1) * t_p; % in h
 Output_number = 0;
 
 for n = 1:100
+    % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
-    inputs_size = length(inputs);
-    for m = 1:inputs_size
-        [beta, eta] = FindWeibullOfComponentByTaskId(inputs{m, 1}, Tasks, Components);
-    end
-    % [Output_objective,interval] = Objective_Function (....)
-    if Output_objective => Output
-    Output_number = Output_objective;
-    Output = interval;
+    
+    % Execute objective function to find objective-param.
+    [Output_objective, interval] = ObjectFunction(inputs, t_max, t_p, noComponents, Components, noTasks, Tasks, VesselLocations);
+    
+    % Monte-Carlo check better solution.
+    if Output_objective >= Output
+        Output_number = Output_objective;
+        Output = interval;
     end
 end
 
 % Output
+output_number
