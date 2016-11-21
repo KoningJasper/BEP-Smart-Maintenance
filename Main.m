@@ -6,7 +6,7 @@ clc;
 
 % Parameters
 t_p     = 1;  % Time Step (h)
-no_runs = 100; % Number of MonteCarlo runs.
+no_runs = 50; % Number of MonteCarlo runs.
 
 % Read data
 Components      = DataReader('Data/Components.xls');
