@@ -6,20 +6,17 @@ no_tasks      = size(tasks, 1);
 no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-plotObj        = ones(no_time_steps + 1, 1);
-plotLambda     = ones(no_time_steps + 1, 1);
+plotObj        = ones(no_time_steps + 1);
+plotLambda     = ones(no_time_steps + 1);
 lambdaOverTime = ones(no_time_steps + 1, no_components);
 
 % Pre-check %
-interval = cell2mat(input) .* cell2mat(tasks(:, 6)); % in tijd (h)
+interval = cell2mat(input) .* cell2mat(tasks(:, 6));
 for i = 1:no_tasks
     no_executed_maintenance = floor(no_time_steps/interval(i));
 
     for j = 1:no_executed_maintenance
         tijdstip = floor(j*interval(i));
-        if(tijdstip <= 1)
-            tijdstip = 1;
-        end
         if vesselLocation{tijdstip, 2} == 0  %0 is op zee, 1 is in de haven
             Output_Objective = 0;
             %disp(['Deze is stuk, pre-check, bij tijdstip: ', num2str(tijdstip), '.']);
@@ -29,18 +26,20 @@ for i = 1:no_tasks
 end
 
 % Integrate over Time %
-Output_Objective   = 0;
-m1                 = ones(no_components, 1);
-active_maintenance = zeros(no_components, no_tasks);
+Output_Objective = 0;
+m1               = ones(no_components, 1);
 
+% Time-Integration.
 for i = 2:no_time_steps + 1
-    lambda_system = 1;
+    lambda_system = 1; % Set to one for easy-multiplication. 
     
+    % Loop through components
     for n = 1:no_components
         [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
         
         component_id = components{n,1};
         relevant_maintenance_tasks = FindTasksByComponentId(component_id, tasks);
+        
         
         m2 = 0;
         
@@ -61,34 +60,29 @@ for i = 2:no_time_steps + 1
             if(component_id ~= affected_component_id)
                 continue;
             end
-                                
-            % Start maintenance
-            if(mod(i, timeOfExecution) == 0)
-                active_maintenance(n, m) = 1;
-            end
             
-            % Maintenance is ongoing.
-            if(active_maintenance(n, m) == 1)
-                 % Check location
+            % Check if maintenance is ongoing
+            if(timeOfExecution <= i && i <= endTimeMaintenance)
+                % Check location
                 location = vesselLocation{i, 2};
                 
                 if(location ~= locationOfExecution)
-                    Output_Objective = 0; % Possibly reschedule.
+                    Output_Objective = 0;
+                    %disp(['De pre-check is stuk bij tijdstip  ', num2str(i), 'h en interval ', num2str(interval), '.']);
                     return;
                 end
                 
                 % Reduce availability with working time
                 Output_Objective = Output_Objective - t_p;
                 
-                % End Maintenance
-                if(mod(i, endTimeMaintenance) == 0)
+                % Set m1 after maintenance
+                if(i == endTimeMaintenance)
                     m1(n, 1) = task{1, 8};
                     m2       = m2 + task{1, 9};
-                    active_maintenance(n, m) = 0;
                 end
+            else
+                continue;
             end
-            
-            
         end
         
         % Recalculate reliability
@@ -107,8 +101,8 @@ for i = 2:no_time_steps + 1
     end
 
     Output_Objective = Output_Objective + lambda_system * t_p;
-    plotLambda(i, 1) = lambda_system;
-    plotObj(i, 1)    = Output_Objective;  
+    plotLambda(i)    = lambda_system;
+    plotObj(i)       = Output_Objective;  
 end
 
 plotLambda = plotLambda(:, 1);
