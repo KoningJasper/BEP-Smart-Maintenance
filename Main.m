@@ -1,3 +1,4 @@
+%% Program Initialization %%
 % Clear
 clear all;
 close all;
