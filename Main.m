@@ -4,7 +4,8 @@ close all;
 clc;
 
 % Parameters
-t_p   = 1; % Time Step (h)
+t_p     = 1;  % Time Step (h)
+no_runs = 50; % Number of MonteCarlo runs.
 
 % Read data
 Components      = DataReader('Data/Components.xls');
@@ -24,7 +25,7 @@ relPerComp    = [];
 % END INIT %
 
 % Execute MC %
-for n = 1:50
+for n = 1:no_runs
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
     
@@ -42,20 +43,28 @@ for n = 1:50
 end
 % END Execute MC %
 
-% Output %
-disp(['De gevonden maximum adjusted availability is ', num2str(Output_number), ' bij een de volgende intervallen: ']);
+%% Output %%
+disp(['De gevonden maximum adjusted availability is ', num2str(Output_number), 'h bij een de volgende intervallen: ']);
 disp(Output);
+
+% Graphs %
+% Reliability
+% Rel. = 1 - failure_rate
 figure;
 plot(plotL);
 title('Reliability over time')
 xlabel('Time (h)');
 ylabel('Reliability (-)');
+
+% Adjusted availability
+% Ad. av = sum t_0 to t_max [delta_t * (1 - failure_rate(t))]
 figure;
 plot(plotO);
 title('Adjusted availability over time');
 xlabel('Time (h)');
 ylabel('Adjusted availability (-)');
 
+% Reliability per component %
 for i = 1:size(relPerComp, 2)
     figure;
     plot(relPerComp(:, i));
