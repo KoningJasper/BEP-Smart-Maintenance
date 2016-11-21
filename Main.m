@@ -45,7 +45,7 @@ end
 
 %% Output %%
 disp(['De gevonden maximum adjusted availability is ', num2str(round(Output_number, 1)), ' h bij een de volgende onderhouds-intervallen: ']);
-table((1:size(Output, 1))', Output, 'VariableNames', {'Taak', 'Interval'})
+disp(table((1:size(Output, 1))', Output, 'VariableNames', {'Taak', 'Interval'}));
 
 % Graphs %
 % Reliability
