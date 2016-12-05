@@ -14,16 +14,13 @@ Tasks           = DataReader('Data/Tasks.xls');
 VesselLocations = DataReader('Data/VesselLocations.xls');
 
 % Set params according to data
-t_max = (length(VesselLocations) - 1) * t_p; % in h
+% t_max = (length(VesselLocations) - 1) * t_p; % in h
 
 % Read actual data
-%t_max = 125*24; % in h
-%Components      = DataReader('ActualData/Components.xls');
-%Tasks           = DataReader('ActualData/Tasks.xls');
-%[VesselLocations] = VaarschemaMakerFunctie( t_max,t_p);
-
-
-
+% t_max           = 10*24; % in h
+% Components      = DataReader('ActualData/Components.xls');
+% Tasks           = DataReader('ActualData/Tasks.xls');
+% VesselLocations = VaarschemaMakerFunctie(t_max,t_p);
 
 %% Monte-Carlo %%
 % INIT %
@@ -54,6 +51,11 @@ end
 % END Execute MC %
 
 %% Output %%
+if(Output_number == 0)
+    disp('No solution found!')
+    return;
+end;
+
 disp(['De gevonden maximum adjusted availability is ', num2str(round(Output_number, 1)), ' h bij een de volgende onderhouds-intervallen: ']);
 disp(table((1:size(Output, 1))', Output, 'VariableNames', {'Taak', 'Interval'}));
 

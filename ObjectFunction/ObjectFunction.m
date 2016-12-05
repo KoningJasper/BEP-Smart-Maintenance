@@ -20,7 +20,12 @@ for i = 1:no_tasks
         if(tijdstip <= 1)
             tijdstip = 1;
         end
-        if vesselLocation{tijdstip, 2} == 0  %0 is op zee, 1 is in de haven
+        
+        if(tijdstip > t_max)
+            continue;
+        end
+        
+        if (vesselLocation(tijdstip, 1) == 0)  %0 is op zee, 1 is in de haven
             Output_Objective = 0;
             %disp(['Deze is stuk, pre-check, bij tijdstip: ', num2str(tijdstip), '.']);
             return
@@ -70,7 +75,7 @@ for i = 2:no_time_steps + 1
             % Maintenance is ongoing.
             if(active_maintenance(n, m) == 1)
                  % Check location
-                location = vesselLocation{i, 2};
+                location = vesselLocation(i, 1);
                 
                 if(location ~= locationOfExecution)
                     Output_Objective = 0; % Possibly reschedule.
