@@ -1,6 +1,5 @@
 %% Program Initialization %%
 % Clear
-clear all;
 close all;
 clc;
 
@@ -12,9 +11,10 @@ no_runs = 50; % Number of MonteCarlo runs.
 Components      = DataReader('Data/Components.xls');
 Tasks           = DataReader('Data/Tasks.xls');
 VesselLocations = DataReader('Data/VesselLocations.xls');
+VesselLocations = VesselLocations(:, 2);
 
 % Set params according to data
-% t_max = (length(VesselLocations) - 1) * t_p; % in h
+t_max = (length(VesselLocations) - 1) * t_p; % in h
 
 % Read actual data
 % t_max           = 10*24; % in h
@@ -37,12 +37,12 @@ for n = 1:no_runs
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, plotLambda, plotObj, lambdaOverTime] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations);
+    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, true, 0.2);
     
     % Monte-Carlo check if is better solution.
     if Output_objective >= Output_number
         Output_number = Output_objective;
-        Output        = inputs;
+        Output        = maintenanceTimes;
         plotL         = plotLambda;
         plotO         = plotObj;
         relPerComp    = lambdaOverTime;
@@ -57,7 +57,26 @@ if(Output_number == 0)
 end;
 
 disp(['De gevonden maximum adjusted availability is ', num2str(round(Output_number, 1)), ' h bij een de volgende onderhouds-intervallen: ']);
-disp(table((1:size(Output, 1))', Output, 'VariableNames', {'Taak', 'Interval'}));
+
+sz = 1;
+for(i = 1:size(Output, 1))
+    sn = size(Output(i, :), 2);
+    if(sn > sz)
+        sz = sn;
+    end
+end
+
+strings = {'Taak', 'Naam'};
+T = table((1:size(Output, 1))', Tasks(:, 2));
+for i=1:sz
+    strings{1, i + 2} = strjoin({'Onderhoud', num2str(i)}, '_');
+end
+
+T1 = array2table(Output);
+T = [T T1];
+T.Properties.VariableNames = strings;
+disp(T);
+%disp(table((1:size(Output, 1))', Output, 'VariableNames', strings));
 
 % Graphs %
 % Reliability
