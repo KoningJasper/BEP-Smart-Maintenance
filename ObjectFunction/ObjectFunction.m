@@ -40,8 +40,16 @@ for i = 1:no_tasks
             % Check possible solutions later than t;
             if(forwardBias == true)
                 endTime = (1 + maximumBias) * interval(i);
-                if(endTime >= 1)
-                    endTime = tasks{i, 6};
+                
+                if(j > 1)
+                    if(endTime >= (maintenanceTimes(i, j-1) + tasks{i, 6}))
+                        endTime = tasks{i, 6};
+                    end
+                    endTime = endTime + maintenanceTimes(i, j - 1);
+                else
+                    if(endTime >= tasks{i, 6})
+                        endTime = tasks{i, 6};
+                    end
                 end
                 tijdstip = findMaintenanceTime(tijdstip, endTime, t_p, vesselLocation);
             end
@@ -51,6 +59,14 @@ for i = 1:no_tasks
                 startTime = (1 - maximumBias) * interval(i);
                 if(startTime <= 0)
                     startTime = 0;
+                end
+                
+                if(j > 1)
+                    startTime = startTime + maintenanceTimes(i, j - 1);
+                else
+                    if(startTime <= 0)
+                        startTime = 0;
+                    end
                 end
                 tijdstip = findMaintenanceTime(startTime, tijdstip, t_p, vesselLocation);
             end
