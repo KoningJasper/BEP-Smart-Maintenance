@@ -1,4 +1,4 @@
-function [ Output_Objective, plotLambda, plotObj, lambdaOverTime] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
+function [ Output_Objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
 
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
@@ -33,17 +33,25 @@ for i = 1:no_tasks
             continue;
         end
         
-        if (vesselLocation(tijdstip, 1) ~= 1)  %0 is op zee, 1 is in de haven
+        if (vesselLocation{tijdstip, 1} ~= 1)  %0 is op zee, 1 is in de haven
             % Deze planning kan dus niet omdat het schip dan op zee is.
             % Verzin een nieuwe oplossing.
             
             % Check possible solutions later than t;
             if(forwardBias == true)
                 endTime = (1 + maximumBias) * interval(i);
-                if(endTime >= 1)
-                    endTime = tasks{i, 6};
+                
+                if(j > 1)
+                    if(endTime >= (maintenanceTimes(i, j-1) + tasks{i, 6}))
+                        endTime = tasks{i, 6};
+                    end
+                    endTime = endTime + maintenanceTimes(i, j - 1);
+                else
+                    if(endTime >= tasks{i, 6})
+                        endTime = tasks{i, 6};
+                    end
                 end
-                tijdstip = findMaintenanceTime(tijdstip, endTime, t_p, vesselLocations);
+                tijdstip = findMaintenanceTime(tijdstip, endTime, t_p, vesselLocation);
             end
             
             % Check possible solutions earlier than t;
@@ -52,7 +60,15 @@ for i = 1:no_tasks
                 if(startTime <= 0)
                     startTime = 0;
                 end
-                tijdstip = findMaintenanceTime(startTime, tijdstip, t_p, vesselLocations);
+                
+                if(j > 1)
+                    startTime = startTime + maintenanceTimes(i, j - 1);
+                else
+                    if(startTime <= 0)
+                        startTime = 0;
+                    end
+                end
+                tijdstip = findMaintenanceTime(startTime, tijdstip, t_p, vesselLocation);
             end
             
             if(tijdstip == 0)
@@ -74,6 +90,9 @@ end
 Output_Objective   = 0;
 m1                 = ones(no_components, 1);
 active_maintenance = zeros(no_components, no_tasks);
+endTimeMaintenance = zeros(no_components, no_tasks);
+RjPerComponent     = ones(no_components, 1);
+maintenanceTimePerComponent = zeros(no_components, 1);
 
 for i = 2:no_time_steps + 1
     lambda_system = 1;
@@ -88,8 +107,6 @@ for i = 2:no_time_steps + 1
         
         for m = 1:no_tasks
             task                  = tasks(m, :);
-            timeOfExecution       = floor(interval * task{1, 6});
-            endTimeMaintenance    = timeOfExecution + task{1, 4};
             locationOfExecution   = task{1,3};
             affected_component_id = task{1, 7};
             
@@ -104,14 +121,15 @@ for i = 2:no_time_steps + 1
             end
                                 
             % Start maintenance
-            if(any(maintenanceTimes()
+            if(any(maintenanceTimes(m, :) == i))
                 active_maintenance(n, m) = 1;
+                endTimeMaintenance(n, m) = i + task{1, 4};
             end
             
             % Maintenance is ongoing.
             if(active_maintenance(n, m) == 1)
                  % Check location
-                location = vesselLocation(i, 1);
+                location = vesselLocation{i, 1};
                 
                 if(location ~= locationOfExecution)
                     Output_Objective = 0; % Possibly reschedule.
@@ -122,7 +140,8 @@ for i = 2:no_time_steps + 1
                 Output_Objective = Output_Objective - t_p;
                 
                 % End Maintenance
-                if(mod(i, endTimeMaintenance) == 0)
+                if(endTimeMaintenance(n, m) == i)
+                    maintenanceTimePerComponent(n, size(maintenanceTimePerComponent + 1) = i;
                     m1(n, 1) = task{1, 8};
                     m2       = m2 + task{1, 9};
                     active_maintenance(n, m) = 0;
@@ -133,13 +152,18 @@ for i = 2:no_time_steps + 1
         end
         
         % Recalculate reliability
-        lambda_component = 1 - FailureRateN(t_p, beta, eta, m1(n, 1), 1 - lambdaOverTime(i - 1, n));
-        
-        % Add (m2) jump
-        if(m2 + lambda_component >= 1)
-            lambda_component = 1;
+        j  = size(RjPerComponent(n, :), 2);
+        tm = maintenanceTimePerComponent(n, :);
+        tm = tm(end);
+        if(tm == 0)
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, i + 1, j, m1(n, 1), m2, eta, beta);
         else
-            lambda_component = lambda_component + m2;
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, tm, j, m1(n, 1), m2, eta, beta);
+        end
+
+        lambda_component     = Rt(end, 2);
+        for k=1:size(Rj, 1)
+            RjPerComponent(n, k) = Rj(k);
         end
         
         % Calculate system reliability

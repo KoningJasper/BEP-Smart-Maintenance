@@ -1,4 +1,4 @@
-function [ Output_Objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
+function [ Output_Objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
 
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
@@ -91,6 +91,8 @@ Output_Objective   = 0;
 m1                 = ones(no_components, 1);
 active_maintenance = zeros(no_components, no_tasks);
 endTimeMaintenance = zeros(no_components, no_tasks);
+RjPerComponent     = ones(no_components, 1);
+maintenanceTimePerComponent = zeros(no_components, 1);
 
 for i = 2:no_time_steps + 1
     lambda_system = 1;
@@ -139,6 +141,7 @@ for i = 2:no_time_steps + 1
                 
                 % End Maintenance
                 if(endTimeMaintenance(n, m) == i)
+                    maintenanceTimePerComponent(n, size(maintenanceTimePerComponent(n, :), 2) + 1) = i;
                     m1(n, 1) = task{1, 8};
                     m2       = m2 + task{1, 9};
                     active_maintenance(n, m) = 0;
@@ -149,13 +152,27 @@ for i = 2:no_time_steps + 1
         end
         
         % Recalculate reliability
-        lambda_component = 1 - FailureRateN(t_p, beta, eta, m1(n, 1), 1 - lambdaOverTime(i - 1, n));
+        j   = size(RjPerComponent(n, :), 2); % j-th
+        tms = maintenanceTimePerComponent(n, :)';
         
-        % Add (m2) jump
-        if(m2 + lambda_component >= 1)
-            lambda_component = 1;
+        if(j == 1)
+            ts = i; % Time since last maintenance.
         else
-            lambda_component = lambda_component + m2;
+            ts = i - tms(end); % Time since last maintenance.
+        end     
+        
+        tm = tms(end); % Time of next maintenance
+        
+        if(tm == 0)
+            j = 1;
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
+        else
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);
+        end
+
+        lambda_component     = Rt(end, 2);
+        for k=1:size(Rj, 1)
+            RjPerComponent(n, k) = Rj(k);
         end
         
         % Calculate system reliability

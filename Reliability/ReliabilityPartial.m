@@ -1,4 +1,4 @@
-function [ Rj ] = ReliabilityPartial(R_0_j, t, j, m1, tp, theta, beta)
+function [ Rj ] = ReliabilityPartial(R_0_j, ts, m1, theta, beta)
     %RELIABILITYPARTIAL Generates a partial sesction of the reliability graph
     % R_0_j = as defined in formula (4) of the Tsai paper.
     % t     = current time.
@@ -9,6 +9,6 @@ function [ Rj ] = ReliabilityPartial(R_0_j, t, j, m1, tp, theta, beta)
     % theta = Weibull scale parameter
     % beta  = Weibull shape parameter.
     
-    Rj = R_0_j * exp(-((((1/m1) * (t-(j-1)*tp)) / theta)^beta));
+    Rj = R_0_j * exp(-((((1/m1) * (ts)) / theta)^beta));
 end
 

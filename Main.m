@@ -5,7 +5,7 @@ clc;
 
 % Parameters
 t_p     = 1;  % Time Step (h)
-no_runs = 50; % Number of MonteCarlo runs.
+no_runs = 10; % Number of MonteCarlo runs.
 
 % Read dummy data
 Components      = DataReader('Data/Components.xls');
@@ -29,6 +29,7 @@ Output        = zeros(size(Tasks, 1), 1);
 plotL         = [];
 plotO         = [];
 relPerComp    = [];
+mcpc          = [];
 % END INIT %
 
 % Execute MC %
@@ -37,7 +38,7 @@ for n = 1:no_runs
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, true, 0.2);
+    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, true, 0.2);
     
     % Monte-Carlo check if is better solution.
     if Output_objective >= Output_number
@@ -46,6 +47,7 @@ for n = 1:no_runs
         plotL         = plotLambda;
         plotO         = plotObj;
         relPerComp    = lambdaOverTime;
+        mcpc          = maintenanceTimePerComponent;
     end
 end
 % END Execute MC %
