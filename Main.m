@@ -4,8 +4,11 @@ close all;
 clc;
 
 % Parameters
-t_p     = 1;  % Time Step (h)
-no_runs = 10; % Number of MonteCarlo runs.
+t_p                = 1;     % Time Step (h)
+noRuns             = 10;    % Number of MonteCarlo runs.
+margin_MC          = 0.2;   % Margin in planning
+allowForward       = true;  % Allow maintenance to occur later 
+exceedComponentMax = false; % Exceed the specified component max time between maintenance.
 
 % Read dummy data
 Components      = DataReader('Data/Components.xls');
@@ -40,7 +43,7 @@ for n = 1:no_runs
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, true, 0.2);
+    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
     
     % Monte-Carlo check if is better solution.
     if Output_objective >= Output_number
