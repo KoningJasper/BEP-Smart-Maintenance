@@ -1,4 +1,4 @@
-function [ Output_Objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
+function [ Output_Objective, plotReliability, plotObj, reliabilityOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
 
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
@@ -13,10 +13,12 @@ no_tasks      = size(tasks, 1);
 no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-plotObj          = ones(no_time_steps + 1, 1);
-plotLambda       = ones(no_time_steps + 1, 1);
-lambdaOverTime   = ones(no_time_steps + 1, no_components);
-maintenanceTimes = ones(no_tasks, 1);                       % Times at which maintenance occurs.
+plotObj             = ones(no_time_steps + 1, 1);
+plotReliability     = ones(no_time_steps + 1, 1);
+plotHazard          = zeros(no_time_steps + 1, 1);
+reliabilityOverTime = ones(no_time_steps + 1, no_components);
+hazardOverTime      = zeros(no_time_steps + 1, no_components);
+maintenanceTimes    = ones(no_tasks, 1);                       % Times at which maintenance occurs.
 
 % Pre-check %
 interval = cell2mat(input) .* cell2mat(tasks(:, 6)); % in tijd (h)
@@ -88,14 +90,16 @@ end
 
 % Integrate over Time %
 Output_Objective   = 0;
-m1                 = ones(no_components, 1);
-active_maintenance = zeros(no_components, no_tasks);
-endTimeMaintenance = zeros(no_components, no_tasks);
-RjPerComponent     = ones(no_components, 1);
-maintenanceTimePerComponent = zeros(no_components, 1);
+m1                 = ones(no_components, 1);            % m1 per component, Tsai.
+active_maintenance = zeros(no_components, no_tasks);    % Whether maintenance is active or not.
+endTimeMaintenance = zeros(no_components, no_tasks);    % EndTimes of maintenance, per component, per task.
+RjPerComponent     = ones(no_components, 1);            % Reliability per component, per j-step.
+HjPerComponent     = zeros(no_components, 1);           % Hazard per component, per j-step.
+maintenanceTimePerComponent = zeros(no_components, 1);  % maintenace times per component.
 
 for i = 2:no_time_steps + 1
-    lambda_system = 1;
+    reliabilitySystem = 1;
+    hazardSystem      = 0;
     
     for n = 1:no_components
         [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
@@ -166,24 +170,34 @@ for i = 2:no_time_steps + 1
         if(tm == 0)
             j = 1;
             [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
+            [Ht, Hj] = FailureRateT([], HjPerComponent(n, :)', 0, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
         else
-            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);            
+            [Ht, Hj] = FailureRateT([], HjPerComponent(n, :)', 0, i, ts, tm, j, m1(n, 1), m2, eta, beta);
         end
 
-        lambda_component     = Rt(end, 2);
+        reliabilityComponent = Rt(end, 2);
         for k=1:size(Rj, 1)
             RjPerComponent(n, k) = Rj(k);
         end
         
-        % Calculate system reliability
-        lambda_system        = lambda_system * lambda_component; 
-        lambdaOverTime(i, n) = lambda_component;
+        hazardComponent = Ht(end, 2);
+        for k=1:size(Hj, 1)
+            HjPerComponent(n, k) = Hj(k);
+        end
+        
+        % Calculate system reliability and hazard
+        reliabilitySystem         = reliabilitySystem * reliabilityComponent; 
+        hazardSystem              = hazardSystem + hazardComponent;
+        reliabilityOverTime(i, n) = reliabilityComponent;
+        hazardOverTime(i, n)      = hazardComponent;
     end
 
-    Output_Objective = Output_Objective + lambda_system * t_p;
-    plotLambda(i, 1) = lambda_system;
-    plotObj(i, 1)    = Output_Objective;  
+    Output_Objective      = Output_Objective + reliabilitySystem * t_p;
+    plotReliability(i, 1) = reliabilitySystem;
+    plotHazard(i, 1)      = hazardSystem;
+    plotObj(i, 1)         = Output_Objective;  
 end
 
-plotLambda = plotLambda(:, 1);
-plotObj    = plotObj(:, 1);
+plotReliability = plotReliability(:, 1);
+plotObj         = plotObj(:, 1);

@@ -90,8 +90,9 @@ end
 Output_Objective   = 0;
 m1                 = ones(no_components, 1);
 active_maintenance = zeros(no_components, no_tasks);
-endTimeMaintenance = zeros(no_components, no_tasks);
-RjPerComponent     = ones(no_components, 1);
+endTimeMaintenance = zeros(no_components, no_tasks);    % EndTimes of maintenanceper component, per task.
+RjPerComponent     = ones(no_components, 1);            % Reliability per component, per j-step.
+HjPerComponent     = zeros(no_components, 1);           % Hazard per component, per j-step.
 maintenanceTimePerComponent = zeros(no_components, 1);
 
 for i = 2:no_time_steps + 1
@@ -141,7 +142,7 @@ for i = 2:no_time_steps + 1
                 
                 % End Maintenance
                 if(endTimeMaintenance(n, m) == i)
-                    maintenanceTimePerComponent(n, size(maintenanceTimePerComponent + 1) = i;
+                    maintenanceTimePerComponent(n, size(maintenanceTimePerComponent(n, :), 2) + 1) = i;
                     m1(n, 1) = task{1, 8};
                     m2       = m2 + task{1, 9};
                     active_maintenance(n, m) = 0;
@@ -152,13 +153,22 @@ for i = 2:no_time_steps + 1
         end
         
         % Recalculate reliability
-        j  = size(RjPerComponent(n, :), 2);
-        tm = maintenanceTimePerComponent(n, :);
-        tm = tm(end);
-        if(tm == 0)
-            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, i + 1, j, m1(n, 1), m2, eta, beta);
+        j   = size(RjPerComponent(n, :), 2); % j-th
+        tms = maintenanceTimePerComponent(n, :)';
+        
+        if(j == 1)
+            ts = i; % Time since last maintenance.
         else
-            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, tm, j, m1(n, 1), m2, eta, beta);
+            ts = i - tms(end); % Time since last maintenance.
+        end     
+        
+        tm = tms(end); % Time of next maintenance
+        
+        if(tm == 0)
+            j = 1;
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
+        else
+            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);
         end
 
         lambda_component     = Rt(end, 2);

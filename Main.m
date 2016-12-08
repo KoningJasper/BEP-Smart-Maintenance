@@ -28,7 +28,9 @@ Output_number = 0;
 Output        = zeros(size(Tasks, 1), 1);
 plotL         = [];
 plotO         = [];
+plotH         = [];
 relPerComp    = [];
+hazPerComp    = [];
 mcpc          = [];
 % END INIT %
 
@@ -38,7 +40,7 @@ for n = 1:no_runs
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, true, 0.2);
+    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, true, 0.2);
     
     % Monte-Carlo check if is better solution.
     if Output_objective >= Output_number
@@ -48,6 +50,8 @@ for n = 1:no_runs
         plotO         = plotObj;
         relPerComp    = lambdaOverTime;
         mcpc          = maintenanceTimePerComponent;
+        plotH         = plotHazard;
+        hazPerComp    = hazardOverTime;
     end
 end
 % END Execute MC %
@@ -82,12 +86,19 @@ disp(T);
 
 % Graphs %
 % Reliability
-% Rel. = 1 - failure_rate
 figure;
 plot(plotL);
 title('Reliability over time')
 xlabel('Time (h)');
 ylabel('Reliability (-)');
+
+% Hazard
+figure;
+plot(plotH);
+title('Failure-rate over time')
+xlabel('Time (h)');
+ylabel('Failure-Rate (-)');
+
 
 % Adjusted availability
 % Ad. av = sum t_0 to t_max [delta_t * (1 - failure_rate(t))]
@@ -104,6 +115,12 @@ for i = 1:size(relPerComp, 2)
     title(['Reliability over time for component: ', Components{i, 2}]);
     xlabel('Time (h)');
     ylabel('Reliability (-)');
+    
+    figure;
+    plot(hazPerComp(:, i));    
+    title(['Failure-rate over time for component: ', Components{i, 2}]);
+    xlabel('Time (h)');
+    ylabel('Failure-Rate (-)');
 end
 
 % END Output %
