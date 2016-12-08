@@ -35,7 +35,7 @@ for i = 1:no_tasks
             continue;
         end
         
-        if (vesselLocation{tijdstip, 1} ~= 1)  %0 is op zee, 1 is in de haven
+        if (vesselLocation(tijdstip, 2) ~= 1)  %0 is op zee, 1 is in de haven
             % Deze planning kan dus niet omdat het schip dan op zee is.
             % Verzin een nieuwe oplossing.
             
@@ -53,7 +53,7 @@ for i = 1:no_tasks
                         endTime = tasks{i, 6};
                     end
                 end
-                tijdstip = findMaintenanceTime(tijdstip, endTime, t_p, vesselLocation);
+                tijdstip = findMaintenanceTime(tijdstip, endTime, t_p, vesselLocation, tasks{i, 4});
             end
             
             % Check possible solutions earlier than t;

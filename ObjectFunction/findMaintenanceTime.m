@@ -10,7 +10,7 @@ function time = findMaintenanceTime(startTime, endTime, tp, vesselLocations, dur
     availableDuration = 0;
     
     for i=startTime:tp:endTime
-        if(vesselLocations{i, 1} == 1)
+        if(vesselLocations(i, 2) == 1)
             availableDuration = availableDuration + 1;
         else 
             availableDuration = 0;
