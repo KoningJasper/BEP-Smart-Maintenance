@@ -19,6 +19,7 @@ plotHazard          = zeros(no_time_steps + 1, 1);
 reliabilityOverTime = ones(no_time_steps + 1, no_components);
 hazardOverTime      = zeros(no_time_steps + 1, no_components);
 maintenanceTimes    = ones(no_tasks, 1);                       % Times at which maintenance occurs.
+maintenanceTimePerComponent = zeros(no_components, 1);  % maintenace times per component.
 
 % Pre-check %
 interval = cell2mat(input) .* cell2mat(tasks(:, 6)); % in tijd (h)
@@ -39,6 +40,7 @@ for i = 1:no_tasks
             % Deze planning kan dus niet omdat het schip dan op zee is.
             % Verzin een nieuwe oplossing.
             
+            ht = floor(tijdstip);
             % Check possible solutions later than t;
             if(forwardBias == true)
                 endTime = (1 + maximumBias) * interval(i);
@@ -53,24 +55,24 @@ for i = 1:no_tasks
                         endTime = tasks{i, 6};
                     end
                 end
-                tijdstip = findMaintenanceTime(tijdstip, endTime, t_p, vesselLocation, tasks{i, 4});
+                tijdstip = findMaintenanceTime(ht, endTime, t_p, vesselLocation, tasks{i, 4});
             end
             
             % Check possible solutions earlier than t;
-            if(tijdstip == 0 || forwardbias == false)
-                startTime = (1 - maximumBias) * interval(i);
+            if(tijdstip == 0 || forwardBias == false)
+                startTime = floor((1 - maximumBias) * interval(i));
                 if(startTime <= 0)
                     startTime = 0;
                 end
                 
                 if(j > 1)
-                    startTime = startTime + maintenanceTimes(i, j - 1);
+                    startTime = floor(startTime + maintenanceTimes(i, j - 1));
                 else
                     if(startTime <= 0)
                         startTime = 0;
                     end
                 end
-                tijdstip = findMaintenanceTime(startTime, tijdstip, t_p, vesselLocation);
+                tijdstip = findMaintenanceTime(startTime, ht, t_p, vesselLocation, tasks{i,4});
             end
             
             if(tijdstip == 0)
@@ -95,7 +97,6 @@ active_maintenance = zeros(no_components, no_tasks);    % Whether maintenance is
 endTimeMaintenance = zeros(no_components, no_tasks);    % EndTimes of maintenance, per component, per task.
 RjPerComponent     = ones(no_components, 1);            % Reliability per component, per j-step.
 HjPerComponent     = zeros(no_components, 1);           % Hazard per component, per j-step.
-maintenanceTimePerComponent = zeros(no_components, 1);  % maintenace times per component.
 
 for i = 2:no_time_steps + 1
     reliabilitySystem = 1;
@@ -133,13 +134,8 @@ for i = 2:no_time_steps + 1
             % Maintenance is ongoing.
             if(active_maintenance(n, m) == 1)
                  % Check location
-                location = vesselLocation{i, 1};
-                
-                if(location ~= locationOfExecution)
-                    Output_Objective = 0; % Possibly reschedule.
-                    return;
-                end
-                
+                location = vesselLocation(i, 2);
+                                              
                 % Reduce availability with working time
                 Output_Objective = Output_Objective - t_p;
                 
@@ -149,6 +145,12 @@ for i = 2:no_time_steps + 1
                     m1(n, 1) = task{1, 8};
                     m2       = m2 + task{1, 9};
                     active_maintenance(n, m) = 0;
+                end
+                
+                % Check if still active and location.
+                if(active_maintenance(n, m) == 1 && location ~= locationOfExecution)
+                    Output_Objective = 0; % Possibly reschedule.
+                    return;
                 end
             end
             

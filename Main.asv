@@ -5,12 +5,12 @@ clc;
 
 % Parameters
 t_p                = 1;     % Time Step (h)
-t_max              = 3000;  % Maximum simulation time.
-noRuns             = 5;     % Number of MonteCarlo runs.
+t_max              = 3000;
+noRuns             = 5;    % Number of MonteCarlo runs.
 margin_MC          = 0.5;   % Margin in planning
 allowForward       = true;  % Allow maintenance to occur later 
 exceedComponentMax = false; % Exceed the specified component max time between maintenance.
-noCores            = 2;     % Number of logical CPU cores.
+
 % Read dummy data
 % Components      = DataReader('Data/Components.xls');
 % Tasks           = DataReader('Data/Tasks.xls');
@@ -30,30 +30,31 @@ VesselLocations = VaarschemaMakerFunctie(t_max,t_p);
 
 %% Monte-Carlo %%
 % INIT %
-% Output_number = 0;
-% Output        = zeros(size(Tasks, 1), 1);
-% plotL         = [];
-% plotO         = [];
-% plotH         = [];
-% relPerComp    = [];
-% hazPerComp    = [];
-% mcpc          = [];
+Output_number = 0;
+Output        = zeros(size(Tasks, 1), 1);
+plotL         = [];
+plotO         = [];
+plotH         = [];
+relPerComp    = [];
+hazPerComp    = [];
+mcpc          = [];
 % END INIT %
 
 % Execute MC %
 numberOfTasks = size(Tasks, 1);
 results       = zeros(noRuns, numberOfTasks + 1);
 delete(gcp('nocreate'))
-parpool(noCores);
-parfor n = 1:noRuns
+parpool;
+for n = 1:noRuns
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, ~, ~, ~, ~, ~, ~, ~] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
+    [Output_objective, plotLambda, plotObj, lambdaOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
     
     % Monte-Carlo check if is better solution.
-    results(n, :) = [Output_objective cell2mat(inputs')];
+    results(n, 1)     = Output_objective;
+    results(n, 2:end) = cell2mat(inputs');
 %     if Output_objective >= Output_number
 %         Output_number = Output_objective;
 %         Output        = ma2intenanceTimes;
@@ -65,13 +66,13 @@ parfor n = 1:noRuns
 %         hazPerComp    = hazardOverTime;
 %     end
 end
-delete(gcp('nocreate'))
+p = gcp;
+delete(p)
 % END Execute MC %
 
 % Extract results
 [Y, I] = max(results(:, 1));
-inputmat = results(I, 2:end)';
-input = mat2cell(inputmat, size(inputmat, 1), 1);
+input = results(Y, 2:end)';
 [Output_number, plotL, plotO, relPerComp, Output, mcpc, hazPerComp, plotH] = ObjectFunction(input, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
 
 %% Output %%

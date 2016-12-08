@@ -8,6 +8,15 @@ function time = findMaintenanceTime(startTime, endTime, tp, vesselLocations, dur
     
     time              = 0;
     availableDuration = 0;
+    maxTime           = size(vesselLocations, 1);
+    
+    if(endTime > maxTime)
+        endTime = maxTime;
+    end
+    
+    if(startTime <= 1)
+        startTime = 1;
+    end
     
     for i=startTime:tp:endTime
         if(vesselLocations(i, 2) == 1)
@@ -17,7 +26,7 @@ function time = findMaintenanceTime(startTime, endTime, tp, vesselLocations, dur
         end
         
         if(availableDuration >= duration)
-            time = i - availableDuration;
+            time = i - availableDuration + 1;
             % If first possible solution is desired insert: 'return;'
         end
     end
