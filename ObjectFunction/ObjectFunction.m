@@ -1,4 +1,4 @@
-function [ Output_Objective, plotReliability, plotObj, reliabilityOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias)
+function [ totalCostSystem, plotReliability, plotTotalCost, reliabilityOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, costPerManhour, penaltyCost, timeFactorAtSea)
 
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
@@ -14,12 +14,14 @@ no_time_steps = t_max/t_p;
 
 % Pre-alloc %
 plotObj             = ones(no_time_steps + 1, 1);
+plotTotalCost       = zeros(no_time_steps + 1, 1);
 plotReliability     = ones(no_time_steps + 1, 1);
 plotHazard          = zeros(no_time_steps + 1, 1);
 reliabilityOverTime = ones(no_time_steps + 1, no_components);
 hazardOverTime      = zeros(no_time_steps + 1, no_components);
 maintenanceTimes    = ones(no_tasks, 1);                       % Times at which maintenance occurs.
 maintenanceTimePerComponent = zeros(no_components, 1);  % maintenace times per component.
+totalCostSystem     = 0;
 
 % Pre-check %
 interval = cell2mat(input) .* cell2mat(tasks(:, 6)); % in tijd (h)
@@ -110,6 +112,9 @@ for i = 2:no_time_steps + 1
         
         m2 = 0;
         
+        sumTaskDuration = 0;
+        sumPartCost     = 0;
+        
         for m = 1:no_tasks
             task                  = tasks(m, :);
             locationOfExecution   = task{1,3};
@@ -135,16 +140,19 @@ for i = 2:no_time_steps + 1
             if(active_maintenance(n, m) == 1)
                  % Check location
                 location = vesselLocation(i, 2);
-                                              
+                
+                sumTaskDuration = sumTaskDuration + t_p;
+                
                 % Reduce availability with working time
                 Output_Objective = Output_Objective - t_p;
                 
                 % End Maintenance
                 if(endTimeMaintenance(n, m) == i)
                     maintenanceTimePerComponent(n, size(maintenanceTimePerComponent(n, :), 2) + 1) = i;
-                    m1(n, 1) = task{1, 8};
-                    m2       = m2 + task{1, 9};
+                    m1(n, 1)                 = task{1, 8};
+                    m2                       = m2 + task{1, 9};
                     active_maintenance(n, m) = 0;
+                    sumPartCost              = task{1, 10};
                 end
                 
                 % Check if still active and location.
@@ -189,17 +197,25 @@ for i = 2:no_time_steps + 1
         end
         
         % Calculate system reliability and hazard
+        PMCostComponent           = sumTaskDuration * costPerManhour + sumPartCost;
+        
+        timeFactor = 1;
+        if(vesselLocation(i, 2) == 0)
+            timeFactor = timeFactorAtSea;
+        end
+        
+        CMCostComponent           = hazardComponent * t_p * (sumTaskDuration * (timeFactor) * (costPerManhour + penaltyCost) + sumPartCost);
+        TotalCostComponent        = PMCostComponent + CMCostComponent;
+        totalCostSystem           = totalCostSystem + TotalCostComponent;
         reliabilitySystem         = reliabilitySystem * reliabilityComponent; 
         hazardSystem              = hazardSystem + hazardComponent;
         reliabilityOverTime(i, n) = reliabilityComponent;
         hazardOverTime(i, n)      = hazardComponent;
     end
-
+    
+    plotTotalCost(i, 1)   = totalCostSystem;
     Output_Objective      = Output_Objective + reliabilitySystem * t_p;
     plotReliability(i, 1) = reliabilitySystem;
     plotHazard(i, 1)      = hazardSystem;
     plotObj(i, 1)         = Output_Objective;  
 end
-
-plotReliability = plotReliability(:, 1);
-plotObj         = plotObj(:, 1);

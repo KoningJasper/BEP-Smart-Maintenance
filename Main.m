@@ -4,19 +4,26 @@ clear;
 close all;
 clc;
 
-disp('Initializing');
+% User Inputs
+R_min              = input('Required minimum reliability: ');              % Minimum reliability;
+ManhourCostPerHour = input('Cost per manhour, for maintenance: ');         % Cost per man hour, for maintenance.
+PenaltyCostPerHour = input('Penalty cost per hour of downtime: ');         % Cost per hour of downtime extra, can be charter-rate per hour.
+timeFactorAtSea    = input('Time factor for maintenance at sea: ');        % Time factor for maintenance while at sea.
+noCores            = input('Number of logical CPU cores to run on: ');     % Number of logical CPU cores.
+
 
 % Setup
+startProgramTime = tic;
+disp('Initializing');
 addpath('ActualData', 'Data', 'Locaters', 'ObjectFunction', 'Reliability');
 
 % Parameters
 t_p                = 1;     % Time Step (h)
 t_max              = 3000;  % Maximum simulation time.
-noRuns             = 50;    % Number of MonteCarlo runs.
+noRuns             = 100;   % Number of MonteCarlo runs.
 margin_MC          = 0.5;   % Margin in planning
 allowForward       = true;  % Allow maintenance to occur later 
 exceedComponentMax = false; % Exceed the specified component max time between maintenance.
-noCores            = input('Number of logical CPU cores to run on? ');     % Number of logical CPU cores.
 
 % Read data
 disp('Reading excel data.');
@@ -40,26 +47,26 @@ numberOfTasks = size(Tasks, 1);
 results       = zeros(noRuns, numberOfTasks + 1);
 
 disp('Starting Monte-Carlo simulation');
-tic;
+startMCTic = tic;
 parfor n = 1:noRuns
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
     
     % Execute objective function to find objective-param.
-    [Output_objective, ~, ~, ~, ~, ~, ~, ~] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
+    Output_objective = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC, ManhourCostPerHour, PenaltyCostPerHour, timeFactorAtSea);
     
     % Write results
     results(n, :) = [Output_objective cell2mat(inputs')];
 end
 delete(gcp('nocreate')) % Remove parallel cluster.
-disp(['Completed ', num2str(noRuns), ' simulations in ', num2str(toc), 's']);
+disp(['Completed ', num2str(noRuns), ' simulations in ', num2str(toc(startMCTic)), 's']);
 % END Execute MC %
 
 % Extract best result
 [Y, I] = max(results(:, 1));
 inputmat = results(I, 2:end)';
 input = mat2cell(inputmat, size(inputmat, 1), 1);
-[Output_number, plotL, plotO, relPerComp, Output, mcpc, hazPerComp, plotH] = ObjectFunction(input, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
+[Output_number, plotL, plotO, relPerComp, Output, mcpc, hazPerComp, plotH] = ObjectFunction(input, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC, ManhourCostPerHour, PenaltyCostPerHour, timeFactorAtSea);
 
 %% Output
 if(Output_number == 0)
@@ -67,7 +74,7 @@ if(Output_number == 0)
     return;
 end;
 
-disp(['Found a maximum adjusted availability of ', num2str(round(Output_number, 1)), ' h using the following maintenance schedule: ']);
+disp(['Found a total cost of $', num2str(round(Output_number, 2)), ' using the following maintenance schedule: ']);
 
 sz = 1;
 for(i = 1:size(Output, 1))
@@ -109,9 +116,9 @@ ylabel('Failure-Rate (-)');
 % Ad. av = sum t_0 to t_max [delta_t * (1 - failure_rate(t))]
 figure;
 plot(plotO);
-title('Adjusted availability over time');
+title('Cost over time');
 xlabel('Time (h)');
-ylabel('Adjusted availability (-)');
+ylabel('Cost ($)');
 
 % Reliability per component %
 for i = 1:size(relPerComp, 2)
@@ -129,3 +136,5 @@ for i = 1:size(relPerComp, 2)
 end
 
 % END Output %
+
+disp(['Program executed in ', num2str(toc(startProgramTime)), 's']);
