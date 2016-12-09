@@ -1,26 +1,25 @@
-%% Program Initialization %%
+%% Program Initialization
 % Clear
+clear;
 close all;
 clc;
+
+disp('Initializing');
+
+% Setup
+addpath('ActualData', 'Data', 'Locaters', 'ObjectFunction', 'Reliability');
 
 % Parameters
 t_p                = 1;     % Time Step (h)
 t_max              = 3000;  % Maximum simulation time.
-noRuns             = 5;     % Number of MonteCarlo runs.
+noRuns             = 50;    % Number of MonteCarlo runs.
 margin_MC          = 0.5;   % Margin in planning
 allowForward       = true;  % Allow maintenance to occur later 
 exceedComponentMax = false; % Exceed the specified component max time between maintenance.
-noCores            = 2;     % Number of logical CPU cores.
-% Read dummy data
-% Components      = DataReader('Data/Components.xls');
-% Tasks           = DataReader('Data/Tasks.xls');
-% VesselLocations = Cell2Mat(DataReader('Data/VesselLocations.xls'));
-% 
-% % Set params according to data
-% t_max = (length(VesselLocations) - 1) * t_p; % in h
+noCores            = input('Number of logical CPU cores to run on? ');     % Number of logical CPU cores.
 
-% Read actual data
-addpath('ActualData')
+% Read data
+disp('Reading excel data.');
 Components      = DataReader('ActualData/Components.xls');
 Tasks           = DataReader('ActualData/Tasks.xls');
 VesselLocations = VaarschemaMakerFunctie(t_max,t_p); 
@@ -28,23 +27,20 @@ VesselLocations = VaarschemaMakerFunctie(t_max,t_p);
 % written, which reads the excel file of that sailing schedule and devides
 % it into time-steps.
 
-%% Monte-Carlo %%
-% INIT %
-% Output_number = 0;
-% Output        = zeros(size(Tasks, 1), 1);
-% plotL         = [];
-% plotO         = [];
-% plotH         = [];
-% relPerComp    = [];
-% hazPerComp    = [];
-% mcpc          = [];
-% END INIT %
+%% Monte-Carlo
+% Setup parallel cluster
+localCluster = parcluster('local');
+localCluster.NumWorkers = noCores;
+saveProfile(localCluster);
+delete(gcp('nocreate'))
+parpool(noCores);
 
 % Execute MC %
 numberOfTasks = size(Tasks, 1);
 results       = zeros(noRuns, numberOfTasks + 1);
-delete(gcp('nocreate'))
-parpool(noCores);
+
+disp('Starting Monte-Carlo simulation');
+tic;
 parfor n = 1:noRuns
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(Tasks);
@@ -52,35 +48,26 @@ parfor n = 1:noRuns
     % Execute objective function to find objective-param.
     [Output_objective, ~, ~, ~, ~, ~, ~, ~] = ObjectFunction(inputs, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
     
-    % Monte-Carlo check if is better solution.
+    % Write results
     results(n, :) = [Output_objective cell2mat(inputs')];
-%     if Output_objective >= Output_number
-%         Output_number = Output_objective;
-%         Output        = ma2intenanceTimes;
-%         plotL         = plotLambda;
-%         plotO         = plotObj;
-%         relPerComp    = lambdaOverTime;
-%         mcpc          = maintenanceTimePerComponent;
-%         plotH         = plotHazard;
-%         hazPerComp    = hazardOverTime;
-%     end
 end
-delete(gcp('nocreate'))
+delete(gcp('nocreate')) % Remove parallel cluster.
+disp(['Completed ', num2str(noRuns), ' simulations in ', num2str(toc), 's']);
 % END Execute MC %
 
-% Extract results
+% Extract best result
 [Y, I] = max(results(:, 1));
 inputmat = results(I, 2:end)';
 input = mat2cell(inputmat, size(inputmat, 1), 1);
 [Output_number, plotL, plotO, relPerComp, Output, mcpc, hazPerComp, plotH] = ObjectFunction(input, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC);
 
-%% Output %%
+%% Output
 if(Output_number == 0)
     disp('No solution found!')
     return;
 end;
 
-disp(['De gevonden maximum adjusted availability is ', num2str(round(Output_number, 1)), ' h bij een de volgende onderhouds-intervallen: ']);
+disp(['Found a maximum adjusted availability of ', num2str(round(Output_number, 1)), ' h using the following maintenance schedule: ']);
 
 sz = 1;
 for(i = 1:size(Output, 1))
