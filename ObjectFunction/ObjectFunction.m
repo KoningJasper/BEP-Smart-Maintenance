@@ -13,7 +13,6 @@ no_tasks      = size(tasks, 1);
 no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-plotObj             = ones(no_time_steps + 1, 1);
 plotTotalCost       = zeros(no_time_steps + 1, 1);
 plotReliability     = ones(no_time_steps + 1, 1);
 plotHazard          = zeros(no_time_steps + 1, 1);
@@ -78,8 +77,6 @@ for i = 1:no_tasks
             end
             
             if(tijdstip == 0)
-                % No solution found.
-                Output_Objective = 0;
                 return;
             else
                 % Solution found.
@@ -93,7 +90,6 @@ for i = 1:no_tasks
 end
 
 % Integrate over Time %
-Output_Objective   = 0;
 m1                 = ones(no_components, 1);            % m1 per component, Tsai.
 active_maintenance = zeros(no_components, no_tasks);    % Whether maintenance is active or not.
 endTimeMaintenance = zeros(no_components, no_tasks);    % EndTimes of maintenance, per component, per task.
@@ -142,10 +138,7 @@ for i = 2:no_time_steps + 1
                 location = vesselLocation(i, 2);
                 
                 sumTaskDuration = sumTaskDuration + t_p;
-                
-                % Reduce availability with working time
-                Output_Objective = Output_Objective - t_p;
-                
+                                
                 % End Maintenance
                 if(endTimeMaintenance(n, m) == i)
                     maintenanceTimePerComponent(n, size(maintenanceTimePerComponent(n, :), 2) + 1) = i;
@@ -157,7 +150,6 @@ for i = 2:no_time_steps + 1
                 
                 % Check if still active and location.
                 if(active_maintenance(n, m) == 1 && location ~= locationOfExecution)
-                    Output_Objective = 0; % Possibly reschedule.
                     return;
                 end
             end
@@ -214,8 +206,6 @@ for i = 2:no_time_steps + 1
     end
     
     plotTotalCost(i, 1)   = totalCostSystem;
-    Output_Objective      = Output_Objective + reliabilitySystem * t_p;
     plotReliability(i, 1) = reliabilitySystem;
     plotHazard(i, 1)      = hazardSystem;
-    plotObj(i, 1)         = Output_Objective;  
 end
