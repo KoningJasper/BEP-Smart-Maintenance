@@ -5,7 +5,7 @@ close all;
 clc;
 
 % User Inputs
-R_min              = input('Required minimum reliability: ');              % Minimum reliability;
+%R_min              = input('Required minimum reliability: ');              % Minimum reliability;
 ManhourCostPerHour = input('Cost per manhour, for maintenance: ');         % Cost per man hour, for maintenance.
 PenaltyCostPerHour = input('Penalty cost per hour of downtime: ');         % Cost per hour of downtime extra, can be charter-rate per hour.
 timeFactorAtSea    = input('Time factor for maintenance at sea: ');        % Time factor for maintenance while at sea.
