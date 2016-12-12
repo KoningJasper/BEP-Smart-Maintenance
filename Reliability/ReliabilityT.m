@@ -1,4 +1,4 @@
-function [Rt, Rj] = ReliabilityT(Rt, Rj, R0, t, ts, tp, j, m1, m2, theta, beta)
+function [Rt, Rj] = ReliabilityT(Rt, Rt_prev, Rj, R0, t, ts, tp, j, m1, m2, theta, beta)
     % RELIABILITYT Reliability at time t.
     
     % PARAMS
@@ -23,8 +23,7 @@ function [Rt, Rj] = ReliabilityT(Rt, Rj, R0, t, ts, tp, j, m1, m2, theta, beta)
     if(mod(t, tp) == 0)
         % Calc R_0_j
         m2_fac  = m2^j;  % m2 compounds when doing maintenance multiple times.
-        R_0_j   = Rj(j); % Reliability of the system at the (j-1)th state, @ j-1 equals j because matlab indexes at 1.
-        Rtplus0 = ReliabilityPartial(R_0_j, ts, m1, theta, beta); % Calculate reliability before maintenance.
+        Rtplus0 = Rt_prev; % Calculate reliability before maintenance.
         Rtplus1 = Rtplus0 + m2_fac*(R0 - Rtplus0); % Reliability after maintenance
         
         % Output

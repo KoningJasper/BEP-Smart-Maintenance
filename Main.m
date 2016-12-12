@@ -121,20 +121,29 @@ xlabel('Time (h)');
 ylabel('Cost ($)');
 
 % Reliability per component %
+figure;
+title('Reliability over time per component.');
+xlabel('Time (h)');
+ylabel('Reliability (-)');
+legendStrings = {};
 for i = 1:size(relPerComp, 2)
-    figure;
+    hold on;
+    legendStrings{i} = Components{i, 2};
     plot(relPerComp(:, i));
-    title(['Reliability over time for component: ', Components{i, 2}]);
-    xlabel('Time (h)');
-    ylabel('Reliability (-)');
-    
-    figure;
-    plot(hazPerComp(:, i));    
-    title(['Failure-rate over time for component: ', Components{i, 2}]);
-    xlabel('Time (h)');
-    ylabel('Failure-Rate (-)');
 end
+legend(legendStrings);
 
+figure;
+title('Failure-rate over time per component');
+xlabel('Time (h)');
+ylabel('Failure-Rate (-)');
+legendStrings = {};
+for i = 1:size(relPerComp, 2)
+    hold on;
+    legendStrings{i} = Components{i, 2};   
+    plot(hazPerComp(:, i));    
+end
+legend(legendStrings);
 % END Output %
 
 disp(['Program executed in ', num2str(toc(startProgramTime)), 's']);

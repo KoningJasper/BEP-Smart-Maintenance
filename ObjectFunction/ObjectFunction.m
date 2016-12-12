@@ -167,15 +167,15 @@ for i = 2:no_time_steps + 1
             ts = i - tms(end); % Time since last maintenance.
         end     
         
-        tm = tms(end); % Time of next maintenance
+        tm = tms(end); % Time of last maintenance
         
         if(tm == 0)
             j = 1;
-            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
-            [Ht, Hj] = FailureRateT([], HjPerComponent(n, :)', 0, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
+            [Rt, Rj] = ReliabilityT([], reliabilityOverTime(i-1, n), RjPerComponent(n, :)', 1, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
+            [Ht, Hj] = FailureRateT([], hazardOverTime(i-1, n), HjPerComponent(n, :)', 0, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
         else
-            [Rt, Rj] = ReliabilityT([], RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);            
-            [Ht, Hj] = FailureRateT([], HjPerComponent(n, :)', 0, i, ts, tm, j, m1(n, 1), m2, eta, beta);
+            [Rt, Rj] = ReliabilityT([], reliabilityOverTime(i-1, n), RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);            
+            [Ht, Hj] = FailureRateT([], hazardOverTime(i-1, n), HjPerComponent(n, :)', 0, i, ts, tm, j, m1(n, 1), m2, eta, beta);
         end
 
         reliabilityComponent = Rt(end, 2);

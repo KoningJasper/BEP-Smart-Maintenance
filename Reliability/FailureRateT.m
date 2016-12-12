@@ -1,4 +1,4 @@
-function [ Ht, Hj ] = FailureRateT(Ht, Hj, H0, t, ts, tp, j, m1, m2, theta, beta)
+function [ Ht, Hj ] = FailureRateT(Ht, Ht_prev, Hj, H0, t, ts, tp, j, m1, m2, theta, beta)
     %FAILURERATET FaillureRate at time t
     
     % PARAMS
@@ -23,8 +23,7 @@ function [ Ht, Hj ] = FailureRateT(Ht, Hj, H0, t, ts, tp, j, m1, m2, theta, beta
     if(mod(t, tp) == 0)
         % Calc R_0_j
         m2_fac  = m2^j;                                                 % m2 compounds when doing maintenance multiple times.
-        H_0_j   = Hj(j);                                                % Reliability of the system at the (j-1)th state, @ j-1 equals j because matlab indexes at 1.
-        Htplus0 = FailureRatePartial(H_0_j, ts, m1, theta, beta); % Calculate reliability before maintenance.
+        Htplus0 = Ht_prev; % Calculate reliability before maintenance.
         Htplus1 = Htplus0 + m2_fac*(H0 - Htplus0);                      % Reliability after maintenance
         
         % Output
