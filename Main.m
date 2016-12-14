@@ -20,7 +20,7 @@ addpath('ActualData', 'Data', 'Locaters', 'ObjectFunction', 'Reliability');
 % Parameters
 t_p                = 1;     % Time Step (h)
 t_max              = 3000;  % Maximum simulation time.
-noRuns             = 100;   % Number of MonteCarlo runs.
+noRuns             = 40;     % Number of MonteCarlo runs.
 margin_MC          = 0.5;   % Margin in planning
 allowForward       = true;  % Allow maintenance to occur later 
 exceedComponentMax = false; % Exceed the specified component max time between maintenance.
@@ -63,7 +63,7 @@ disp(['Completed ', num2str(noRuns), ' simulations in ', num2str(toc(startMCTic)
 % END Execute MC %
 
 % Extract best result
-[Y, I] = max(results(:, 1));
+[Y, I] = min(results(:, 1));
 inputmat = results(I, 2:end)';
 input = mat2cell(inputmat, size(inputmat, 1), 1);
 [Output_number, plotL, plotO, relPerComp, Output, mcpc, hazPerComp, plotH] = ObjectFunction(input, t_max, t_p, Components, Tasks, VesselLocations, allowForward, margin_MC, ManhourCostPerHour, PenaltyCostPerHour, timeFactorAtSea);
