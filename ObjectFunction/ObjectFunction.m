@@ -1,4 +1,4 @@
-function [ totalCostSystem, plotReliability, plotTotalCost, reliabilityOverTime, maintenanceTimes, maintenanceTimePerComponent, hazardOverTime, plotHazard] = ObjectFunction(input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, costPerManhour, penaltyCost, timeFactorAtSea)
+function [totalCost] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, costPerManhour, penaltyCost, timeFactorAtSea)
 
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
@@ -13,14 +13,12 @@ no_tasks      = size(tasks, 1);
 no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-plotTotalCost       = zeros(no_time_steps + 1, 1);
-plotReliability     = ones(no_time_steps + 1, 1);
-plotHazard          = zeros(no_time_steps + 1, 1);
-reliabilityOverTime = ones(no_time_steps + 1, no_components);
-hazardOverTime      = zeros(no_time_steps + 1, no_components);
-maintenanceTimes    = ones(no_tasks, 1);                       % Times at which maintenance occurs.
-maintenanceTimePerComponent = zeros(no_components, 1);  % maintenace times per component.
-totalCostSystem     = 0;
+maintenanceTimes      = zeros(no_components, no_tasks);    % Start times of maintenance, per component;
+endTimeMaintenance    = cell(no_components, no_tasks);    % EndTimes of maintenance, per component
+noComponentMainte     = ones(no_components, 1);
+maintTimePerComponent = zeros(no_components, 1);
+FailureRepairTimes    = cell2mat(components(:, 6));
+SignificanceIndices   = cell2mat(components(:, 5));
 
 % Pre-check %
 interval = cell2mat(input) .* cell2mat(tasks(:, 6)); % in tijd (h)
@@ -77,135 +75,66 @@ for i = 1:no_tasks
             end
             
             if(tijdstip == 0)
+                totalCost = realmax('single');
                 return;
             else
                 % Solution found.
                 maintenanceTimes(i,j) = tijdstip;
+                component_id = tasks{i, 7};
+                endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + tasks{i, 4}, i];
+                noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
+                maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
             end
         else
             % This time is valid.
             maintenanceTimes(i, j) = tijdstip;
+            component_id = tasks{i, 7};
+            endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + tasks{i, 4}, i];
+            noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
+            maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
         end
     end
 end
 
 % Integrate over Time %
-m1                 = ones(no_components, 1);            % m1 per component, Tsai.
-active_maintenance = zeros(no_components, no_tasks);    % Whether maintenance is active or not.
-endTimeMaintenance = zeros(no_components, no_tasks);    % EndTimes of maintenance, per component, per task.
-RjPerComponent     = ones(no_components, 1);            % Reliability per component, per j-step.
-HjPerComponent     = zeros(no_components, 1);           % Hazard per component, per j-step.
-
-for i = 2:no_time_steps + 1
-    reliabilitySystem = 1;
-    hazardSystem      = 0;
+FailureRateOverTimePerComponent = zeros(no_components, t_max + 1);
+for i = 1:no_components
+    endTimes = endTimeMaintenance(i, :);
+    endTimes = endTimes(~cellfun('isempty', endTimes));
     
-    for n = 1:no_components
-        [beta, eta] = FindWeibullOfComponentById(components{n, 1}, components);
-        
-        component_id = components{n,1};
-        %relevant_maintenance_tasks = FindTasksByComponentId(component_id, tasks);
-        
-        m2 = 0;
-        
-        sumTaskDuration = 0;
-        sumPartCost     = 0;
-        
-        for m = 1:no_tasks
-            task                  = tasks(m, :);
-            locationOfExecution   = task{1,3};
-            affected_component_id = task{1, 7};
-            
-            % Empty check
-            if(isempty(task{1,1}))
-                continue;
-            end;
-                     
-            % Check correct component
-            if(component_id ~= affected_component_id)
-                continue;
-            end
-                                
-            % Start maintenance
-            if(any(maintenanceTimes(m, :) == i))
-                active_maintenance(n, m) = 1;
-                endTimeMaintenance(n, m) = i + task{1, 4};
-            end
-            
-            % Maintenance is ongoing.
-            if(active_maintenance(n, m) == 1)
-                 % Check location
-                location = vesselLocation(i, 2);
-                
-                sumTaskDuration = sumTaskDuration + t_p;
-                                
-                % End Maintenance
-                if(endTimeMaintenance(n, m) == i)
-                    maintenanceTimePerComponent(n, size(maintenanceTimePerComponent(n, :), 2) + 1) = i;
-                    m1(n, 1)                 = task{1, 8};
-                    m2                       = m2 + task{1, 9};
-                    active_maintenance(n, m) = 0;
-                    sumPartCost              = task{1, 10};
-                end
-                
-                % Check if still active and location.
-                if(active_maintenance(n, m) == 1 && location ~= locationOfExecution)
-                    return;
-                end
-            end
-            
-            
-        end
-        
-        % Recalculate reliability
-        j   = size(RjPerComponent(n, :), 2); % j-th
-        tms = maintenanceTimePerComponent(n, :)';
-        
-        if(j == 1)
-            ts = i; % Time since last maintenance.
-        else
-            ts = i - tms(end); % Time since last maintenance.
-        end     
-        
-        tm = tms(end); % Time of last maintenance
-        
-        if(tm == 0)
-            j = 1;
-            [Rt, Rj] = ReliabilityT([], reliabilityOverTime(i-1, n), RjPerComponent(n, :)', 1, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
-            [Ht, Hj] = FailureRateT([], hazardOverTime(i-1, n), HjPerComponent(n, :)', 0, i, ts, i + 1, j, m1(n, 1), m2, eta, beta);
-        else
-            [Rt, Rj] = ReliabilityT([], reliabilityOverTime(i-1, n), RjPerComponent(n, :)', 1, i, ts, tm, j, m1(n, 1), m2, eta, beta);            
-            [Ht, Hj] = FailureRateT([], hazardOverTime(i-1, n), HjPerComponent(n, :)', 0, i, ts, tm, j, m1(n, 1), m2, eta, beta);
-        end
-
-        reliabilityComponent = Rt(end, 2);
-        for k=1:size(Rj, 1)
-            RjPerComponent(n, k) = Rj(k);
-        end
-        
-        hazardComponent = Ht(end, 2);
-        for k=1:size(Hj, 1)
-            HjPerComponent(n, k) = Hj(k);
-        end
-        
-        % Calculate system reliability and hazard
-        PMCostComponent           = sumTaskDuration * costPerManhour + sumPartCost;
-        
-        timeFactor = 1;
-        if(vesselLocation(i, 2) == 0)
-            timeFactor = timeFactorAtSea;
-        end
-        
-        CMCostComponent           = hazardComponent * t_p * (sumTaskDuration * (timeFactor) * (costPerManhour + penaltyCost) + sumPartCost);
-        TotalCostComponent        = PMCostComponent + CMCostComponent;
-        totalCostSystem           = totalCostSystem + TotalCostComponent;
-        reliabilitySystem         = reliabilitySystem * reliabilityComponent; 
-        hazardSystem              = hazardSystem + hazardComponent;
-        reliabilityOverTime(i, n) = reliabilityComponent;
-        hazardOverTime(i, n)      = hazardComponent;
+    FailureRateOverTimePerComponent(i, :) = Failure_Rate_Graphs_No_Maintenance(i, :);
+    
+    sz = size(endTimes, 2);
+    times = zeros(1, sz);
+    ids   = zeros(1, sz);
+    for n=1:sz
+        times(n) = endTimes{1, n}(1);
+        ids(n)   = endTimes{1, n}(2);
     end
     
-    plotTotalCost(i, 1)   = totalCostSystem;
-    plotReliability(i, 1) = reliabilitySystem;
-    plotHazard(i, 1)      = hazardSystem;
+    for t = 1:sz
+        time = times(t);
+        id   = ids(t);
+        
+        if(time > t_max)
+            continue;
+        end
+        
+        rest_time = t_max + 1 - time + 1;
+        shift     = FailureRateOverTimePerComponent(i, time);
+        m2        = tasks{id, 9};
+        shift     = shift + m2 * (0 - shift);
+        FailureRateOverTimePerComponent(i, time:end) = Failure_Rate_Per_Task(id, 1:rest_time) + shift;
+    end
 end
+
+% Find total cost.
+componentFailures = zeros(no_components, 1);
+for i=1:no_components
+    componentFailures (i) = trapz(FailureRateOverTimePerComponent(i, :)); % Integrate
+end
+TotalSignificance = sum(SignificanceIndices);
+
+Cost_CM   = SignificanceIndices .* FailureRepairTimes .* componentFailures .* timeFactorAtSea .* penaltyCost  ./ TotalSignificance;
+Cost_PM   = maintTimePerComponent .* costPerManhour;
+totalCost = sum(Cost_CM + Cost_PM);

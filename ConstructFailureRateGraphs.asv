@@ -1,0 +1,9 @@
+function [ Failure_Rate_Per_Task ] = ConstructFailureRateGraphsPerTask(Tasks, Components)
+%CONSTRUCTFAILURERATEGRAPHS Summary of this function goes here
+% Detailed explanation goes here
+    for i = 1:size(Tasks, 1)
+        [beta, eta] = FindWeibullOfComponentByTaskId
+    end
+
+end
+
