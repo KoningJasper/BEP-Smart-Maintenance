@@ -1,8 +1,9 @@
 %% Program Initialization
-% Clear
 clear;
 close all;
 clc;
+addpath('Data', 'Locaters', 'ObjectFunction', 'Reliability');
+
 
 % User Inputs
 %R_min              = input('Required minimum reliability: ');              % Minimum reliability;
@@ -19,7 +20,7 @@ noCores            = 4;
 % Setup
 startProgramTime = tic;
 disp('Initializing');
-addpath('ActualData', 'Data', 'Locaters', 'ObjectFunction', 'Reliability');
+
 
 minRuns = input('Minimum number of runs: ');
 maxRuns = input('Maximum number of runs: ');
