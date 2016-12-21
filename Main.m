@@ -9,7 +9,6 @@ addpath('Data', 'Locaters', 'ObjectFunction');
 
 %% User Inputs
 
-R_min                   = input('Required minimum reliability: ');              % Minimum reliability;
 MCH                     = input('Cost per manhour, for maintenance: ');         % Manhour cost per hour (MCH), for maintenance.
 PCH                     = input('Penalty cost per hour of downtime: ');         % Penalty Cost per Hour (PCH), Cost per hour of downtime extra, can be charter-rate per hour.
 TFC                     = input('Time factor for maintenance at sea: ');        % Time factor for maintenance while at sea, time factor at sea(TFC).
@@ -19,7 +18,8 @@ t_max                   = input('schedule time (h): ');                         
 
 % Parameters
 t_p                     = 1;                                                     % Time Step (h)
-margin_MC               = 0.5;                                                   % Margin in planning
+margin_MC               = 0.5;                                                   % Margin in planning in % van gevonden planning.
+margin_MC_abs           = 10;                                                    % Absolute margin in hours.
 allowForward            = true;                                                  % Allow maintenance to occur later 
 exceedComponentMax      = false;                                                 % Exceed the specified component max time between maintenance.
 
@@ -51,11 +51,11 @@ FR0   = ConstructFailureRateGraphsNoMaintenance(t_max, Components);             
 %% Monte-Carlo (MC)
 
     % Setup parallel cluster (to reduce running time of the program, MC simulation is run on sevreal cores)
-%     delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
-%     localCluster            = parcluster('local');
-%     localCluster.NumWorkers = noCores;
-%     saveProfile(localCluster);
-%     parpool(noCores);
+    delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
+    localCluster            = parcluster('local');
+    localCluster.NumWorkers = noCores;
+    saveProfile(localCluster);
+    parpool(noCores);
 
 % Make a empty matrix and preperations for MC
 disp('Starting Monte-Carlo simulation');
@@ -65,11 +65,11 @@ results         = zeros(noRuns, numberOfTasks + 1);
 
 
 % Execute objective function(MC) to find objective-parameters.
-for r=1:noRuns
+parfor r=1:noRuns
   
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(0.5, Tasks);
-    totalCosts = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, MCH, PCH, TFC);
+    totalCosts = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC);
     
     % Write results
     results(r, :) = [totalCosts cell2mat(inputs')];

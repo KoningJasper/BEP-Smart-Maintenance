@@ -1,4 +1,4 @@
-function [totalCost] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, costPerManhour, penaltyCost, timeFactorAtSea)
+function [totalCost] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea)
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
 % eerst gezocht naar oplossing die verder weg zijn niet dichterbij. Bij
@@ -40,8 +40,14 @@ for i = 1:no_tasks
             
             % Check possible solutions later than t;
             if(forwardBias == true)
-                endTime = (1 + maximumBias) * interval(i);
-                
+                % Check what is larger absolute or relative bias, and use
+                % the larger one.
+                if(maximumBias * interval(i) >= maximumBiasAbsolute)
+                    endTime = (1 + maximumBias) * interval(i);
+                else
+                    endTime = interval(i) + maximumBiasAbsolute;
+                end
+                               
                 if(j > 1)
                     if(endTime >= (maintenanceTimes(i, j-1) + tasks{i, 6}))
                         endTime = tasks{i, 6};
@@ -57,7 +63,14 @@ for i = 1:no_tasks
             
             % Check possible solutions earlier than t;
             if(t == 0 || forwardBias == false)
-                startTime = floor((1 - maximumBias) * interval(i));
+                % Check what is larger absolute or relative bias, and use
+                % the larger one.
+                if(maximumBias * interval(i) >= maximumBiasAbsolute)
+                    startTime = floor((1 - maximumBias) * interval(i));
+                else
+                    startTime = interval(i) - maximumBiasAbsolute;
+                end
+                
                 if(startTime <= 0)
                     startTime = 0;
                 end
