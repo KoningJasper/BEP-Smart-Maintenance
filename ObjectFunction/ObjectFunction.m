@@ -13,33 +13,32 @@ no_tasks      = size(tasks, 1);
 no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-maintenanceTimes      = zeros(no_components, no_tasks);    % Start times of maintenance, per component;
-endTimeMaintenance    = cell(no_components, no_tasks);    % EndTimes of maintenance, per component
+maintenanceTimes      = zeros(no_components, no_tasks);     % Start times of maintenance, per component;
+endTimeMaintenance    = cell(no_components, no_tasks);      % EndTimes of maintenance, per component
 noComponentMainte     = ones(no_components, 1);
 maintTimePerComponent = zeros(no_components, 1);
 FailureRepairTimes    = cell2mat(components(:, 6));
 SignificanceIndices   = cell2mat(components(:, 5));
 
-% Pre-check %
-interval = cell2mat(input) .* cell2mat(tasks(:, 6)); % in tijd (h)
+
+%% Pre-check 
+
+interval = cell2mat(input) .* cell2mat(tasks(:, 6));                        % convert ratio to Time for maintenance(h)
 for i = 1:no_tasks
     no_executed_maintenance = floor(no_time_steps/interval(i));
 
     for j = 1:no_executed_maintenance
-        tijdstip = floor(j*interval(i));
-        if(tijdstip <= 1)
-            tijdstip = 1;
+        t = floor(j*interval(i));
+        if(t <= 1)
+            t = 1;
         end
         
-        if(tijdstip > t_max)
-            continue;
-        end
-        
-        if (vesselLocation(tijdstip, 2) ~= 1)  %0 is op zee, 1 is in de haven
-            % Deze planning kan dus niet omdat het schip dan op zee is.
-            % Verzin een nieuwe oplossing.
+        % Check if location of vessel at time (t) matches the required location for the maintenance task.
+        if (vesselLocation(t, 2) ~= 1)                                     %0 at sea, 1 in port, 2 in dock.
             
-            ht = floor(tijdstip);
+            % Vessel  is not at required location at time t, find new time to execute maintenance.
+            ht = floor(t);
+            
             % Check possible solutions later than t;
             if(forwardBias == true)
                 endTime = (1 + maximumBias) * interval(i);
@@ -54,11 +53,11 @@ for i = 1:no_tasks
                         endTime = tasks{i, 6};
                     end
                 end
-                tijdstip = findMaintenanceTime(ht, endTime, t_p, vesselLocation, tasks{i, 4});
+                t = findMaintenanceTime(ht, endTime, t_p, vesselLocation, tasks{i, 4});
             end
             
             % Check possible solutions earlier than t;
-            if(tijdstip == 0 || forwardBias == false)
+            if(t == 0 || forwardBias == false)
                 startTime = floor((1 - maximumBias) * interval(i));
                 if(startTime <= 0)
                     startTime = 0;
@@ -71,37 +70,37 @@ for i = 1:no_tasks
                         startTime = 0;
                     end
                 end
-                tijdstip = findMaintenanceTime(startTime, ht, t_p, vesselLocation, tasks{i,4});
+                t = findMaintenanceTime(startTime, ht, t_p, vesselLocation, tasks{i,4});
             end
             
-            if(tijdstip == 0)
-                totalCost = realmax('single');
-                return;
-            else
-                % Solution found.
-                maintenanceTimes(i,j) = tijdstip;
-                component_id = tasks{i, 7};
-                endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + tasks{i, 4}, i];
-                noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
-                maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
+            % Check if new solution is not found.
+            if(t == 0)
+                totalCost = realmax('single');                             % Set total cost to max possible value.
+                return;                                                    % Exit function.
             end
-        else
-            % This time is valid.
-            maintenanceTimes(i, j) = tijdstip;
-            component_id = tasks{i, 7};
-            endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + tasks{i, 4}, i];
-            noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
-            maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
         end
+        
+        % Check if (newly) scheduled maintenance time exceeds given t_max.
+        if(t > t_max)
+            continue;
+        end
+        
+        % Solution found.
+        maintenanceTimes(i,j) = t;
+        component_id = tasks{i, 7};
+        endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [t + tasks{i, 4}, i];
+        noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
+        maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
     end
 end
 
-% Integrate over Time %
+%% Integrate over Time 
+
 FailureRateOverTimePerComponent = zeros(no_components, t_max + 1);
 for i = 1:no_components
+    % Find end-times of relevant maintenance for component.
     endTimes = endTimeMaintenance(i, :);
     endTimes = endTimes(~cellfun('isempty', endTimes));
-    
     FailureRateOverTimePerComponent(i, :) = Failure_Rate_Graphs_No_Maintenance(i, :);
     
     sz = size(endTimes, 2);
@@ -116,22 +115,27 @@ for i = 1:no_components
         time = times(t);
         id   = ids(t);
         
+        % Skip if (planned) time of maintenance exceeds maximum time.
         if(time > t_max)
             continue;
         end
         
-        rest_time = t_max + 1 - time + 1;
-        shift     = FailureRateOverTimePerComponent(i, time);
-        m2        = tasks{id, 9};
-        shift     = shift + m2 * (0 - shift);
-        FailureRateOverTimePerComponent(i, time:end) = Failure_Rate_Per_Task(id, 1:rest_time) + shift;
+        % Recalculate failure rate of component.
+        restTime  = t_max + 1 - time + 1;                                  % Time left until t_max.
+        endFR     = FailureRateOverTimePerComponent(i, time);              % Value of failure-rate at end of previous maintenance cycle, and start of new maintenance cycle.
+        m2        = tasks{id, 9};                                          % m2 parameter, Tsai.
+        shift     = endFR + m2 * (0 - endFR);                              % Vertical shift to align failure-rate graphs.
+        FailureRateOverTimePerComponent(i, time:end) = Failure_Rate_Per_Task(id, 1:restTime) + shift;
     end
 end
 
-% Find total cost.
+%% Find total cost.
+
+% Find total number of failures per component by integrating Failure-rate
+% of the component.
 componentFailures = zeros(no_components, 1);
 for i=1:no_components
-    componentFailures (i) = trapz(FailureRateOverTimePerComponent(i, :)); % Integrate
+    componentFailures (i) = trapz(FailureRateOverTimePerComponent(i, :));   % Integrate
 end
 TotalSignificance = sum(SignificanceIndices);
 

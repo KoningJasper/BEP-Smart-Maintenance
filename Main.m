@@ -1,5 +1,6 @@
 %% Program Initialization
 % Clear
+
 clear;
 close all;
 clc;
@@ -80,7 +81,7 @@ disp(['Monte-Carlo simulation executed in ', num2str(toc(start_output)), 's']); 
 [Y, I] = min(results(:, 1));
 inputmat = results(I, 2:end)';
 input = mat2cell(inputmat, size(inputmat, 1), 1);
-GatherOutput(FRT, FR0, input, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, MCH, PCH, TFC);
+GatherOutput(FRT, FR0, input, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC);
 
 
 %% Cleaning not relevant programm requirments and show executiontime

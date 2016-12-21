@@ -1,4 +1,4 @@
-function GatherOutput(FRT, FR0, input, t_max, t_p, components, Tasks, vesselLoc, forwardBias, maximumBias, MCH, PCH, timeFactorAtSea)
+function GatherOutput(FRT, FR0, input, t_max, t_p, components, Tasks, vesselLoc, forwardBias, maximumBias)
 %{
 GATHEROUTPUT Summary of this function goes here
     Detailed explanation goes here
@@ -23,8 +23,6 @@ GATHEROUTPUT Summary of this function goes here
     endTimeMaintenance    = cell(no_components, no_tasks);                  % EndTimes of maintenance, per component
     noComponentMainte     = ones(no_components, 1);                         %
     maintTimePerComponent = zeros(no_components, 1);                        %
-%     FailureRepairTimes    = cell2mat(components(:, 6));                     %
-%     SignificanceIndices   = cell2mat(components(:, 5));                     %
 
     %% check
     
@@ -76,29 +74,13 @@ GATHEROUTPUT Summary of this function goes here
                     end
                     tijdstip = findMaintenanceTime(startTime, ht, t_p, vesselLoc, Tasks{i,4});
                 end
-
-%{
-                if(tijdstip == 0)
-                   totalCost = realmax('single');
-                   return;
-                    
-                else
-                    % Solution found.
-                    maintenanceTimes(i,j) = tijdstip;
-                    component_id = Tasks{i, 7};
-                    endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + Tasks{i, 4}, i];
-                    noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
-                    maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + Tasks{i, 4};
-                end
-            else
-%}
-                % This time is valid.
-                maintenanceTimes(i, j) = tijdstip;
-                component_id = Tasks{i, 7};
-                endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + Tasks{i, 4}, i];
-                noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
-                maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + Tasks{i, 4};
             end
+            % Solution found.
+            maintenanceTimes(i,j) = tijdstip;
+            component_id = Tasks{i, 7};
+            endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tijdstip + Tasks{i, 4}, i];
+            noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
+            maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + Tasks{i, 4};
         end
     end
 
@@ -134,22 +116,7 @@ GATHEROUTPUT Summary of this function goes here
             FR_TC(i, time:end) = FRT(id, 1:rest_time) + shift;
         end
     end
-
- %{
- %Find total cost.
-    componentFailures = zeros(no_components, 1);
-    for i=1:no_components
-        componentFailures (i) = trapz(FailureRateOverTimePerComponent(i, :)); % Integrate
-    end
-    TotalSignificance = sum(SignificanceIndices);
-
-    Cost_CM   = SignificanceIndices .* FailureRepairTimes .*
-    componentFailures .* timeFactorAtSea .* PCH  ./ TotalSignificance; %
-    Cost_PM   = maintTimePerComponent .* MCH;
-    totalCost = sum(Cost_CM + Cost_PM);
-
- %}
-
+    
     systemFailureRateOverTime = zeros(t_max, 1);
     for i = 1 : t_max
         systemFailureRateT = 1;
