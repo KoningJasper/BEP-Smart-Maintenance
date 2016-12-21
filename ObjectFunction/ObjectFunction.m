@@ -1,5 +1,4 @@
 function [totalCost] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, costPerManhour, penaltyCost, timeFactorAtSea)
-
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
 % eerst gezocht naar oplossing die verder weg zijn niet dichterbij. Bij
@@ -95,7 +94,7 @@ for i = 1:no_tasks
 end
 
 %% Integrate over Time 
-
+PartCostPerComponent = zeros(no_components, 1);
 FailureRateOverTimePerComponent = zeros(no_components, t_max + 1);
 for i = 1:no_components
     % Find end-times of relevant maintenance for component.
@@ -126,6 +125,7 @@ for i = 1:no_components
         m2        = tasks{id, 9};                                          % m2 parameter, Tsai.
         shift     = endFR + m2 * (0 - endFR);                              % Vertical shift to align failure-rate graphs.
         FailureRateOverTimePerComponent(i, time:end) = Failure_Rate_Per_Task(id, 1:restTime) + shift;
+        PartCostPerComponent(i) = PartCostPerComponent(i) + tasks{id, 10}; % Add part costs.
     end
 end
 
@@ -139,6 +139,6 @@ for i=1:no_components
 end
 TotalSignificance = sum(SignificanceIndices);
 
-Cost_CM   = SignificanceIndices .* FailureRepairTimes .* componentFailures .* timeFactorAtSea .* penaltyCost  ./ TotalSignificance;
-Cost_PM   = maintTimePerComponent .* costPerManhour;
+Cost_CM   = SignificanceIndices ./ TotalSignificance .* FailureRepairTimes .* componentFailures .* timeFactorAtSea .* penaltyCost + componentFailures .* cell2mat(components(:,7)); 
+Cost_PM   = maintTimePerComponent .* costPerManhour + PartCostPerComponent;
 totalCost = sum(Cost_CM + Cost_PM);

@@ -51,11 +51,11 @@ FR0   = ConstructFailureRateGraphsNoMaintenance(t_max, Components);             
 %% Monte-Carlo (MC)
 
     % Setup parallel cluster (to reduce running time of the program, MC simulation is run on sevreal cores)
-    delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
-    localCluster            = parcluster('local');
-    localCluster.NumWorkers = noCores;
-    saveProfile(localCluster);
-    parpool(noCores);
+%     delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
+%     localCluster            = parcluster('local');
+%     localCluster.NumWorkers = noCores;
+%     saveProfile(localCluster);
+%     parpool(noCores);
 
 % Make a empty matrix and preperations for MC
 disp('Starting Monte-Carlo simulation');
@@ -65,7 +65,7 @@ results         = zeros(noRuns, numberOfTasks + 1);
 
 
 % Execute objective function(MC) to find objective-parameters.
-parfor r=1:noRuns
+for r=1:noRuns
   
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(0.5, Tasks);
