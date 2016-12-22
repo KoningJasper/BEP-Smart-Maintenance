@@ -7,7 +7,6 @@ addpath('Data', 'Locaters', 'ObjectFunction');
 
 
 %% User Inputs
-
 MCH                     = input('Cost per manhour, for maintenance: ');         % Manhour cost per hour (MCH), for maintenance.
 PCH                     = input('Penalty cost per hour of downtime: ');         % Penalty Cost per Hour (PCH), Cost per hour of downtime extra, can be charter-rate per hour.
 TFC                     = input('Time factor for maintenance at sea: ');        % Time factor for maintenance while at sea, time factor at sea(TFC).
@@ -42,28 +41,24 @@ it into time-steps.
 disp('Initializing');
 startProgramTime = tic;                                                         % measuring running time of the entire program 
 
-
 % Construct failure rate data   
 FRT   = ConstructFailureRateGraphsPerTask(maxRunningHours, Tasks, Components);            %Failure_Rate_Per_Task (FRT)
 FR0   = ConstructFailureRateGraphsNoMaintenance(maxRunningHours, Components);             %Failure_Rate_Graphs_No_Maintenance (FR0)
 
 
-
 %% Monte-Carlo (MC)
-
-    % Setup parallel cluster (to reduce running time of the program, MC simulation is run on sevreal cores)
-    delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
-    localCluster            = parcluster('local');
-    localCluster.NumWorkers = noCores;
-    saveProfile(localCluster);
-    parpool(noCores);
+% Setup parallel cluster (to reduce running time of the program, MC simulation is run on sevreal cores)
+delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
+localCluster            = parcluster('local');
+localCluster.NumWorkers = noCores;
+saveProfile(localCluster);
+parpool(noCores);
 
 % Make a empty matrix and preperations for MC
 disp('Starting Monte-Carlo simulation');
 start_output    = tic;                                                            % start timer for measering executen time MC.
 numberOfTasks   = size(Tasks, 1);
 results         = cell(noRuns, 5);
-
 
 % Execute objective function(MC) to find objective-parameters.
 parfor r=1:noRuns
@@ -87,7 +82,7 @@ end
 disp(['Total cost: ', num2str(results{I, 1})]);
 disp(['CM cost: ', num2str(sum(results{I, 2}))]);
 disp(['PM cost: ', num2str(sum(results{I, 3}))]);
-GatherOutput(results{I, 4}, Components, VesselLoc, runningHours, t_max);
+GatherOutput(results{I, 4}, Components, t_max);
 
 %% Cleaning not relevant programm requirments and show executiontime
 delete(gcp('nocreate'))                                                      %deleting the create parallelpool      

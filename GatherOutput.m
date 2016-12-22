@@ -1,4 +1,4 @@
-function GatherOutput(FR_TC, components, vessellocation, runningHours, t_max)
+function GatherOutput(FR_TC, components, t_max)
 %{
 GATHEROUTPUT Summary of this function goes here
  %}
