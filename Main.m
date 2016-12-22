@@ -91,3 +91,4 @@ GatherOutput(results{I, 4}, Components, VesselLoc, runningHours, t_max);
 %% Cleaning not relevant programm requirments and show executiontime
 delete(gcp('nocreate'))                                                      %deleting the create parallelpool      
 disp(['Entire program executed in ', num2str(toc(startProgramTime)), 's']);  %stop timer for measering total runningtime and dislplay.
+clear
