@@ -27,6 +27,7 @@ disp('Reading excel data.');
 Components              = DataReader('Data/Components.xls');                      % Reeds the component that are pressent in the symstem.
 Tasks                   = DataReader('Data/Tasks.xls');                           % Reeds the task taht need to be planed.
 VesselLoc               = SailingScheduleGenerator(t_max,t_p);                    % Reeds the sailing schedule of the vessel to determind its location(port dock sailing)
+%VesselLoc               = ones(t_max, 2);
 runningHours            = GetRunningHoursTally(VesselLoc, t_p);
 maxRunningHours         = runningHours(end);
 
