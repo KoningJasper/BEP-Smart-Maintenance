@@ -1,6 +1,5 @@
 %% Program Initialization
 % Clear
-
 clear;
 close all;
 clc;
@@ -28,7 +27,8 @@ disp('Reading excel data.');
 Components              = DataReader('Data/Components.xls');                      % Reeds the component that are pressent in the symstem.
 Tasks                   = DataReader('Data/Tasks.xls');                           % Reeds the task taht need to be planed.
 VesselLoc               = SailingScheduleGenerator(t_max,t_p);                    % Reeds the sailing schedule of the vessel to determind its location(port dock sailing)
-
+runningHours            = GetRunningHoursTally(VesselLoc, t_p);
+maxRunningHours         = runningHours(end);
 
 %{ 
 If a complete sailing schedule is available, a new function should be
@@ -43,8 +43,8 @@ startProgramTime = tic;                                                         
 
 
 % Construct failure rate data   
-FRT   = ConstructFailureRateGraphsPerTask(t_max, Tasks, Components);            %Failure_Rate_Per_Task (FRT)
-FR0   = ConstructFailureRateGraphsNoMaintenance(t_max, Components);             %Failure_Rate_Graphs_No_Maintenance (FR0)
+FRT   = ConstructFailureRateGraphsPerTask(maxRunningHours, Tasks, Components);            %Failure_Rate_Per_Task (FRT)
+FR0   = ConstructFailureRateGraphsNoMaintenance(maxRunningHours, Components);             %Failure_Rate_Graphs_No_Maintenance (FR0)
 
 
 
@@ -61,30 +61,33 @@ FR0   = ConstructFailureRateGraphsNoMaintenance(t_max, Components);             
 disp('Starting Monte-Carlo simulation');
 start_output    = tic;                                                            % start timer for measering executen time MC.
 numberOfTasks   = size(Tasks, 1);
-results         = zeros(noRuns, numberOfTasks + 1);
+results         = cell(noRuns, 5);
 
 
 % Execute objective function(MC) to find objective-parameters.
 parfor r=1:noRuns
-  
     % Generate random input intervals for each of the tasks.
     inputs = GenerateRandomInput(0.5, Tasks);
-    totalCosts = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC);
+    [totalCosts, Cost_CM, Cost_PM, FRPerCompOT] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
     
     % Write results
-    results(r, :) = [totalCosts cell2mat(inputs')];
+    results(r, :) = {totalCosts Cost_CM Cost_PM FRPerCompOT inputs'};
 end
 
 disp(['Monte-Carlo simulation executed in ', num2str(toc(start_output)), 's']);     %stop timmer for executions time MC and dislpay in workspace.
   
 % Extract best result
-[Y, I] = min(results(:, 1));
-inputmat = results(I, 2:end)';
-input = mat2cell(inputmat, size(inputmat, 1), 1);
-GatherOutput(FRT, FR0, input, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC);
+[Y, I] = min(cell2mat(results(:, 1)));
+if(results{I, 1} == realmax('single'))
+    error('No solution found.');
+end
 
+% Display results
+disp(['Total cost: ', num2str(results{I, 1})]);
+disp(['CM cost: ', num2str(sum(results{I, 2}))]);
+disp(['PM cost: ', num2str(sum(results{I, 3}))]);
+GatherOutput(results{I, 4}, Components, VesselLoc, runningHours, t_max);
 
 %% Cleaning not relevant programm requirments and show executiontime
-
 delete(gcp('nocreate'))                                                      %deleting the create parallelpool      
 disp(['Entire program executed in ', num2str(toc(startProgramTime)), 's']);  %stop timer for measering total runningtime and dislplay.

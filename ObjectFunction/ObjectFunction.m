@@ -1,4 +1,4 @@
-function [totalCost] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea)
+function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours)
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
 % eerst gezocht naar oplossing die verder weg zijn niet dichterbij. Bij
@@ -9,11 +9,11 @@ function [totalCost] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs
 % Pre-Calc %
 no_components = size(components, 1);
 no_tasks      = size(tasks, 1);
-no_time_steps = t_max/t_p;
 
 % Pre-alloc %
-maintenanceTimes      = zeros(no_components, no_tasks);     % Start times of maintenance, per component;
-endTimeMaintenance    = cell(no_components, no_tasks);      % EndTimes of maintenance, per component
+maintenanceTimes      = zeros(no_components, no_tasks);     % Start times of maintenance, per component, in running hours.
+endTimeMaintenance    = cell(no_components, no_tasks);      % EndTimes of maintenance, per component, in running hours.
+endTimeCalendar       = cell(no_components, no_tasks);      % EndTimes of maintenance, per component, in calendar hours.
 noComponentMainte     = ones(no_components, 1);
 maintTimePerComponent = zeros(no_components, 1);
 FailureRepairTimes    = cell2mat(components(:, 6));
@@ -21,31 +21,48 @@ SignificanceIndices   = cell2mat(components(:, 5));
 
 
 %% Pre-check 
-
-interval = cell2mat(input) .* cell2mat(tasks(:, 6));                        % convert ratio to Time for maintenance(h)
+maxRunningHours = runningHours(end);
+runningHoursMaintenance = cell2mat(input) .* cell2mat(tasks(:, 6));        % convert ratio to running hours for maintenance (h)
 for i = 1:no_tasks
-    no_executed_maintenance = floor(no_time_steps/interval(i));
+    no_executed_maintenance = floor(maxRunningHours/runningHoursMaintenance(i));
 
     for j = 1:no_executed_maintenance
-        t = floor(j*interval(i));
+        % Find time to execute maintenance based on running hours tally.
+        runningHoursToFind = floor(j*runningHoursMaintenance(i));
+        t = find(runningHours == runningHoursToFind);
+        t = t(end); % Only get last one.
+        component_id = tasks{i, 7};
+        
         if(t <= 1)
             t = 1;
         end
         
+        maxCalendarTimeSinceMaint = tasks{i, 5} * 7 * 24;
+        maxTimeSinceMaint         = tasks{i, 6};
+        
+        if(j > 1)
+            calendarTimeSinceMaint = t - endTimeCalendar{component_id, j - 1};
+            timeSinceMaint         = runningHoursToFind - endTimeMaintenance{component_id, j - 1}(1);
+        else
+            calendarTimeSinceMaint = t;
+            timeSinceMaint         = runningHoursToFind;
+        end
+        
         % Check if location of vessel at time (t) matches the required location for the maintenance task.
-        if (vesselLocation(t, 2) ~= 1)                                     %0 at sea, 1 in port, 2 in dock.
+        %0 at sea, 1 in port, 2 in dock.
+        if (vesselLocation(t, 2) ~= 1 || calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
             
-            % Vessel  is not at required location at time t, find new time to execute maintenance.
+            % Vessel is not at required location at time t or exceed max time, find new time to execute maintenance.
             ht = floor(t);
             
             % Check possible solutions later than t;
-            if(forwardBias == true)
+            if(forwardBias == true && calendarTimeSinceMaint < maxCalendarTimeSinceMaint && timeSinceMaint < maxTimeSinceMaint)
                 % Check what is larger absolute or relative bias, and use
                 % the larger one.
-                if(maximumBias * interval(i) >= maximumBiasAbsolute)
-                    endTime = (1 + maximumBias) * interval(i);
+                if(maximumBias * runningHoursMaintenance(i) >= maximumBiasAbsolute)
+                    endTime = (1 + maximumBias) * runningHoursMaintenance(i);
                 else
-                    endTime = interval(i) + maximumBiasAbsolute;
+                    endTime = runningHoursMaintenance(i) + maximumBiasAbsolute;
                 end
                                
                 if(j > 1)
@@ -62,13 +79,13 @@ for i = 1:no_tasks
             end
             
             % Check possible solutions earlier than t;
-            if(t == 0 || forwardBias == false)
+            if(t == 0 || forwardBias == false || (calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint))
                 % Check what is larger absolute or relative bias, and use
                 % the larger one.
-                if(maximumBias * interval(i) >= maximumBiasAbsolute)
-                    startTime = floor((1 - maximumBias) * interval(i));
+                if(maximumBias * runningHoursMaintenance(i) >= maximumBiasAbsolute)
+                    startTime = floor((1 - maximumBias) * runningHoursMaintenance(i));
                 else
-                    startTime = interval(i) - maximumBiasAbsolute;
+                    startTime = runningHoursMaintenance(i) - maximumBiasAbsolute;
                 end
                 
                 if(startTime <= 0)
@@ -99,8 +116,11 @@ for i = 1:no_tasks
         
         % Solution found.
         maintenanceTimes(i,j) = t;
-        component_id = tasks{i, 7};
-        endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [t + tasks{i, 4}, i];
+        
+        % Find time in runninghours.
+        endTimeCalendar{component_id, j} = t + tasks{i, 4};
+        tRH = runningHours(t);
+        endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tRH + 1, i];
         noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
         maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
     end
@@ -108,7 +128,7 @@ end
 
 %% Integrate over Time 
 PartCostPerComponent = zeros(no_components, 1);
-FailureRateOverTimePerComponent = zeros(no_components, t_max + 1);
+FailureRateOverTimePerComponent = zeros(no_components, maxRunningHours + 1);
 for i = 1:no_components
     % Find end-times of relevant maintenance for component.
     endTimes = endTimeMaintenance(i, :);
@@ -128,12 +148,12 @@ for i = 1:no_components
         id   = ids(t);
         
         % Skip if (planned) time of maintenance exceeds maximum time.
-        if(time > t_max)
+        if(time > maxRunningHours)
             continue;
         end
         
         % Recalculate failure rate of component.
-        restTime  = t_max + 1 - time + 1;                                  % Time left until t_max.
+        restTime  = maxRunningHours + 1 - time + 1;                                  % Time left until t_max.
         endFR     = FailureRateOverTimePerComponent(i, time);              % Value of failure-rate at end of previous maintenance cycle, and start of new maintenance cycle.
         m2        = tasks{id, 9};                                          % m2 parameter, Tsai.
         shift     = endFR + m2 * (0 - endFR);                              % Vertical shift to align failure-rate graphs.
