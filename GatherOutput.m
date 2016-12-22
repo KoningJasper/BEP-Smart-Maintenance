@@ -16,23 +16,6 @@ for i = 1 : runningHourmax
     systemFailureRateT = 1 - systemFailureRateT;
     systemFailureRateOverTime(i, 1) = systemFailureRateT;      
 end
-
-% System failure-rate calendar time.
-calendarSystemFailureRateOverTime = zeros(t_max, 1);
-for i = 2 : t_max
-    if(vessellocation(i, 2) == 1)
-        rh = runningHours(i);
-        systemFailureRateT = 1;
-        for n=1:no_components
-            systemFailureRateT = systemFailureRateT * (1 - FR_TC(n, rh + 1));
-        end
-        systemFailureRateT = 1 - systemFailureRateT;
-        calendarSystemFailureRateOverTime(i, 1) = systemFailureRateT;
-    else
-        calendarSystemFailureRateOverTime(i, 1) = calendarSystemFailureRateOverTime(i - 1, 1);
-    end
-end
-
   %% making figures with results
   
 % figure of total system failure rate
