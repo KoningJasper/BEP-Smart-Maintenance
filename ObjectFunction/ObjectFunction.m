@@ -1,4 +1,4 @@
-function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours)
+function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent, maintenanceTimes, endTimeMaintenance] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours)
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
 % eerst gezocht naar oplossing die verder weg zijn niet dichterbij. Bij
@@ -25,7 +25,12 @@ maxRunningHours = runningHours(end);
 runningHoursMaintenance = cell2mat(input) .* cell2mat(tasks(:, 6));        % convert ratio to running hours for maintenance (h)
 for i = 1:no_tasks
     no_executed_maintenance = floor(maxRunningHours/runningHoursMaintenance(i));
-
+    
+    % Execute loop a minimum of once.
+    if(no_executed_maintenance == 0)
+        no_executed_maintenance = 1;
+    end
+    
     for j = 1:no_executed_maintenance
         % Find time to execute maintenance based on running hours tally.
         runningHoursToFind = floor(j*runningHoursMaintenance(i));
@@ -51,6 +56,11 @@ for i = 1:no_tasks
         % Check if location of vessel at time (t) matches the required location for the maintenance task.
         %0 at sea, 1 in port, 2 in dock.
         if (vesselLocation(t, 2) ~= 1 || calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
+            
+            % Increase the number of times maintenance is done.
+            if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
+                no_executed_maintenance = no_executed_maintenance + 1;
+            end
             
             % Vessel is not at required location at time t or exceed max time, find new time to execute maintenance.
             ht = floor(t);
@@ -99,7 +109,12 @@ for i = 1:no_tasks
                         startTime = 0;
                     end
                 end
-                t = findMaintenanceTime(startTime, ht, t_p, vesselLocation, tasks{i,4});
+                
+                if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint)
+                    t = findMaintenanceTime(startTime, (ht - calendarTimeSinceMaint + maxCalendarTimeSinceMaint), t_p, vesselLocation, tasks{i,4});
+                else
+                    t = findMaintenanceTime(startTime, ht, t_p, vesselLocation, tasks{i,4});
+                end
             end
             
             % Check if new solution is not found.
@@ -119,7 +134,7 @@ for i = 1:no_tasks
         
         % Find time in runninghours.
         endTimeCalendar{component_id, j} = t + tasks{i, 4};
-        tRH = runningHours(t);
+        tRH = runningHours(t) + 1;
         endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tRH + 1, i];
         noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
         maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};

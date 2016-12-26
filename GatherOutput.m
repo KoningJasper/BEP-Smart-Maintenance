@@ -16,7 +16,7 @@ for i = 1 : runningHourmax
     systemFailureRateT = 1 - systemFailureRateT;
     systemFailureRateOverTime(i, 1) = systemFailureRateT;      
 end
-  %% making figures with results
+%% making figures with results
   
 % figure of total system failure rate
 figure;
@@ -25,14 +25,6 @@ title('System failure-rate over running-hours');
 xlabel('Running-Hours (h)');
 ylabel('Failures per running hour');
 xlim([0 runningHourmax]);
-
-% figure of total system failure rate
-figure;
-plot(calendarSystemFailureRateOverTime);
-title('System failure-rate over time');
-xlabel('Time (h)');
-ylabel('Failures per hour');
-xlim([0 t_max]);
 
 %figure of component failure rate
 figure;
