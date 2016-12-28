@@ -1,4 +1,4 @@
-function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent, maintenanceTimes, endTimeMaintenance] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours)
+function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent, maintCalStart, endTimeMaintenance] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours)
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
 % eerst gezocht naar oplossing die verder weg zijn niet dichterbij. Bij
@@ -11,9 +11,9 @@ no_components = size(components, 1);
 no_tasks      = size(tasks, 1);
 
 % Pre-alloc %
-maintenanceTimes      = zeros(no_components, no_tasks);     % Start times of maintenance, per component, in running hours.
+maintCalStart         = zeros(no_tasks, 1);     % Start times of maintenance, per task, in calendar hours.
 endTimeMaintenance    = cell(no_components, no_tasks);      % EndTimes of maintenance, per component, in running hours.
-endTimeCalendar       = cell(no_components, no_tasks);      % EndTimes of maintenance, per component, in calendar hours.
+endTimeCalendar       = zeros(no_components, no_tasks);     % EndTimes of maintenance, per component, in calendar hours.
 noComponentMainte     = ones(no_components, 1);
 maintTimePerComponent = zeros(no_components, 1);
 FailureRepairTimes    = cell2mat(components(:, 6));
@@ -46,7 +46,7 @@ for i = 1:no_tasks
         maxTimeSinceMaint         = tasks{i, 6};
         
         if(j > 1)
-            calendarTimeSinceMaint = t - endTimeCalendar{component_id, j - 1};
+            calendarTimeSinceMaint = t - endTimeCalendar(component_id, j - 1);
             timeSinceMaint         = runningHoursToFind - endTimeMaintenance{component_id, j - 1}(1);
         else
             calendarTimeSinceMaint = t;
@@ -76,10 +76,10 @@ for i = 1:no_tasks
                 end
                                
                 if(j > 1)
-                    if(endTime >= (maintenanceTimes(i, j-1) + tasks{i, 6}))
+                    if(endTime >= (maintCalStart(i, j-1) + tasks{i, 6}))
                         endTime = tasks{i, 6};
                     end
-                    endTime = endTime + maintenanceTimes(i, j - 1);
+                    endTime = endTime + maintCalStart(i, j - 1);
                 else
                     if(endTime >= tasks{i, 6})
                         endTime = tasks{i, 6};
@@ -103,7 +103,7 @@ for i = 1:no_tasks
                 end
                 
                 if(j > 1)
-                    startTime = floor(startTime + maintenanceTimes(i, j - 1));
+                    startTime = floor(startTime + maintCalStart(i, j - 1));
                 else
                     if(startTime <= 0)
                         startTime = 0;
@@ -130,10 +130,10 @@ for i = 1:no_tasks
         end
         
         % Solution found.
-        maintenanceTimes(i,j) = t;
+        maintCalStart(i,j) = t;
         
         % Find time in runninghours.
-        endTimeCalendar{component_id, j} = t + tasks{i, 4};
+        endTimeCalendar(component_id, j) = t + tasks{i, 4};
         tRH = runningHours(t) + 1;
         endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tRH + 1, i];
         noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;

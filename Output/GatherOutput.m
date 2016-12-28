@@ -1,4 +1,4 @@
-function GatherOutput(FR_TC, components, t_max)
+function GatherOutput(FR_TC, components)
 %{
 GATHEROUTPUT Summary of this function goes here
  %}

@@ -3,8 +3,7 @@
 clear;
 close all;
 clc;
-addpath('Data', 'Locaters', 'ObjectFunction');
-
+addpath('Data', 'Locaters', 'ObjectFunction', 'Output');
 
 %% User Inputs
 MCH                     = input('Cost per manhour, for maintenance: ');         % Manhour cost per hour (MCH), for maintenance.
@@ -84,7 +83,8 @@ end
 disp(['Total cost: ', num2str(results{I, 1})]);
 disp(['CM cost: ', num2str(sum(results{I, 2}))]);
 disp(['PM cost: ', num2str(sum(results{I, 3}))]);
-GatherOutput(results{I, 4}, Components, t_max);
+GatherOutput(results{I, 4}, Components);
+OutputPlanningCalendar(results{I,5}, t_p, VesselLoc, Tasks);
 
 %% Cleaning not relevant programm requirments and show executiontime
 delete(gcp('nocreate'))                                                      %deleting the create parallelpool      
