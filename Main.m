@@ -4,7 +4,7 @@ clear;
 close all;
 clc;
 addpath('Data', 'Locaters', 'ObjectFunction', 'Output');
-delete('/Results/*.mat')
+delete('Results/*.mat')
 
 %% User Inputs
 MCH                     = input('Cost per manhour, for maintenance: ');         % Manhour cost per hour (MCH), for maintenance.
@@ -86,6 +86,6 @@ OutputPlanningCalendar(result{1,5}, t_p, VesselLoc, Tasks);
 
 %% Cleaning not relevant programm requirments and show executiontime
 delete(gcp('nocreate'));                                                     % deleting the create parallelpool      
-delete('/Results/*.mat');                                                    % Cleanup results folder.
+delete('Results/*.mat');                                                    % Cleanup results folder.
 disp(['Entire program executed in ', num2str(toc(startProgramTime)), 's']);  %stop timer for measering total runningtime and dislplay.
 %clear
