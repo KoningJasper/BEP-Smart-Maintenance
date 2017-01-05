@@ -12,7 +12,8 @@ no_tasks      = size(tasks, 1);
 
 % Pre-alloc %
 maintCalStart         = zeros(no_tasks, 1);     % Start times of maintenance, per task, in calendar hours.
-endTimeMaintenance    = cell(no_components, no_tasks);      % EndTimes of maintenance, per component, in running hours.
+endTimeTask           = zeros(no_tasks, 1);     % Last end time of maintenance for this task, in running hours.
+endTimeMaintenance    = cell(no_components, 100);      % EndTimes of maintenance, per component, in running hours.
 endTimeMaintenance(:,:) = {0};
 endTimeCalendar       = zeros(no_components, no_tasks);     % EndTimes of maintenance, per component, in calendar hours.
 noComponentMainte     = ones(no_components, 1);
@@ -35,10 +36,11 @@ for i = 1:no_tasks
     j = 1;
     while j <= no_executed_maintenance
         component_id = tasks{i, 7};
+        reqLocation  = tasks{i, 3};
         % Find time to execute maintenance based on running hours tally.
         runningHoursToFind = floor(runningHoursMaintenance(i));
         if(j > 1)
-            runningHoursToFind = floor(endTimeMaintenance{i, j - 1}(1) + j*runningHoursMaintenance(i));
+            runningHoursToFind = floor(endTimeTask(i) + runningHoursMaintenance(i));
         end
         if(runningHoursToFind > maxRunningHours)
             runningHoursToFind = maxRunningHours;
@@ -63,7 +65,7 @@ for i = 1:no_tasks
         
         % Check if location of vessel at time (t) matches the required location for the maintenance task.
         %0 at sea, 1 in port, 2 in dock.
-        if (vesselLocation(t, 2) ~= 1 || calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
+        if (vesselLocation(t, 2) ~= reqLocation || calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
             ideal = t;
             
             % Increase the number of times maintenance is done.
@@ -100,7 +102,7 @@ for i = 1:no_tasks
                         endTime = tasks{i, 6};
                     end
                 end
-                t = findMaintenanceTime(ht, endTime, ideal, t_p, vesselLocation, tasks{i, 4});
+                t = findMaintenanceTime(ht, endTime, ideal, t_p, vesselLocation, tasks{i, 4}, reqLocation);
             end
             
             % Check possible solutions earlier than t;
@@ -126,9 +128,9 @@ for i = 1:no_tasks
                 end
                 
                 if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint)
-                    t = findMaintenanceTime(startTime, (ht - calendarTimeSinceMaint + maxCalendarTimeSinceMaint), ideal, t_p, vesselLocation, tasks{i,4});
+                    t = findMaintenanceTime(startTime, (ht - calendarTimeSinceMaint + maxCalendarTimeSinceMaint), ideal, t_p, vesselLocation, tasks{i,4}, reqLocation);
                 else
-                    t = findMaintenanceTime(startTime, ht, ideal, t_p, vesselLocation, tasks{i,4});
+                    t = findMaintenanceTime(startTime, ht, ideal, t_p, vesselLocation, tasks{i,4}, reqLocation);
                 end
             end
             
@@ -141,8 +143,7 @@ for i = 1:no_tasks
         
         % Check if (newly) scheduled maintenance time exceeds given t_max.
         if(isempty(t) || t > t_max)
-            j = j + 1;
-            continue;
+            break;
         end
         
         % Solution found.
@@ -151,6 +152,7 @@ for i = 1:no_tasks
         % Find time in runninghours.
         endTimeCalendar(component_id, j) = t + tasks{i, 4};
         tRH = runningHours(t) + 1;
+        endTimeTask(i) = tRH;
         endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tRH + 1, i];
         noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
         maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};

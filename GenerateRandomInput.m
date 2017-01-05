@@ -6,7 +6,7 @@ function [ random_input ] = GenerateRandomInput(min_value, Tasks )
     
     
     for i = 1:number_of_tasks
-        random_input{i} = min_value + min_value * rand();
+        random_input{i} = min_value + (1 - min_value) * rand();
     end
     
     

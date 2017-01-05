@@ -1,4 +1,4 @@
-function time = findMaintenanceTime(startTime, endTime, idealTime, tp, vesselLocations, duration)
+function time = findMaintenanceTime(startTime, endTime, idealTime, tp, vesselLocations, duration, requiredLocation)
     % PARAMS
     % startTime       = start time of the search window.
     % endTime         = end time of search window.
@@ -20,7 +20,7 @@ function time = findMaintenanceTime(startTime, endTime, idealTime, tp, vesselLoc
     end
     
     for i=startTime:tp:endTime
-        if(vesselLocations(i, 2) == 1)
+        if(vesselLocations(i, 2) == requiredLocation)
             availableDuration = availableDuration + 1;
         else 
             availableDuration = 0;
