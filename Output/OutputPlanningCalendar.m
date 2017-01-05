@@ -26,9 +26,12 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
         calYear = currentYear + extraYears;
         
         c = calendar(calYear, n);
+        % Calendar where each of the dates has been replaced with 1.
+        oneCal = c; 
+        oneCal(oneCal~=0) = 1;
         
-        from = prevAddage .* ones(6,7) + 24 * (c - ones(6, 7));
-        to   = prevAddage .* ones(6,7) + 24 * c;
+        from = prevAddage .* oneCal + 24 * (c - oneCal);
+        to   = prevAddage .* oneCal + 24 * c;
         
         calTasks = cell(6,7);
         % Itterate through calendar
@@ -40,7 +43,8 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
                 
                 dayFrom = from(y, x);
                 dayTo   = to(y, x);
-                [tak, execution] = find(startCalTimes >= dayFrom && startCalTimes <= dayTo);
+                % Day starts at 24 hours.
+                [tak, execution] = find(startCalTimes >= dayFrom && startCalTimes < dayTo);
                 taks = {};
                 for t=1:size(tak, 1)
                     taks{t} = Tasks{tak(t), 2};
@@ -52,6 +56,8 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
         disp([num2str(calYear), ' - ', num2str(n)]);
         disp(calTasks);
         
-        prevAddage = max(to);
+        % Get maximum value in matrix. (max returns maximum in one
+        % direction.)
+        prevAddage = max(max(to));
     end
 end
