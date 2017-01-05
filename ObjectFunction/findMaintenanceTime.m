@@ -1,7 +1,8 @@
-function time = findMaintenanceTime(startTime, endTime, tp, vesselLocations, duration)
+function time = findMaintenanceTime(startTime, endTime, idealTime, tp, vesselLocations, duration)
     % PARAMS
-    % startTime       = start time.
+    % startTime       = start time of the search window.
     % endTime         = end time of search window.
+    % idealTime       = wanted time.
     % tp              = timestep
     % vesselLocations = location of vessel over time.
     % duration        = duration of maintenance task.
@@ -9,7 +10,7 @@ function time = findMaintenanceTime(startTime, endTime, tp, vesselLocations, dur
     time              = 0;
     availableDuration = 0;
     maxTime           = size(vesselLocations, 1);
-    
+    solutions         = [];
     if(endTime > maxTime)
         endTime = maxTime;
     end
@@ -26,8 +27,14 @@ function time = findMaintenanceTime(startTime, endTime, tp, vesselLocations, dur
         end
         
         if(availableDuration >= duration)
-            time = i - availableDuration + 1;
+            time = i - duration + 1;
+            solutions(end + 1) = time;
             % If first possible solution is desired insert: 'return;'
         end
     end
+    
+    % Select solution with least possible difference with the ideal time
+    diffIdeal = abs(solutions - idealTime);
+    [~,I] = min(diffIdeal);
+    time = solutions(I);
 end

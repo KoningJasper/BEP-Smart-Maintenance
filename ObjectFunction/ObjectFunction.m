@@ -56,10 +56,17 @@ for i = 1:no_tasks
         % Check if location of vessel at time (t) matches the required location for the maintenance task.
         %0 at sea, 1 in port, 2 in dock.
         if (vesselLocation(t, 2) ~= 1 || calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
+            ideal = t;
             
             % Increase the number of times maintenance is done.
             if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
                 no_executed_maintenance = no_executed_maintenance + 1;
+                
+                if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint)
+                    ideal = maxCalendarTimeSinceMaint;
+                elseif(timeSinceMaint > maxTimeSinceMaint)
+                    ideal = maxTimeSinceMaint;
+                end
             end
             
             % Vessel is not at required location at time t or exceed max time, find new time to execute maintenance.
@@ -85,7 +92,7 @@ for i = 1:no_tasks
                         endTime = tasks{i, 6};
                     end
                 end
-                t = findMaintenanceTime(ht, endTime, t_p, vesselLocation, tasks{i, 4});
+                t = findMaintenanceTime(ht, endTime, ideal, t_p, vesselLocation, tasks{i, 4});
             end
             
             % Check possible solutions earlier than t;
@@ -111,9 +118,9 @@ for i = 1:no_tasks
                 end
                 
                 if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint)
-                    t = findMaintenanceTime(startTime, (ht - calendarTimeSinceMaint + maxCalendarTimeSinceMaint), t_p, vesselLocation, tasks{i,4});
+                    t = findMaintenanceTime(startTime, (ht - calendarTimeSinceMaint + maxCalendarTimeSinceMaint), ideal, t_p, vesselLocation, tasks{i,4});
                 else
-                    t = findMaintenanceTime(startTime, ht, t_p, vesselLocation, tasks{i,4});
+                    t = findMaintenanceTime(startTime, ht, ideal, t_p, vesselLocation, tasks{i,4});
                 end
             end
             
@@ -168,7 +175,7 @@ for i = 1:no_components
         end
         
         % Recalculate failure rate of component.
-        restTime  = maxRunningHours + 1 - time + 1;                                  % Time left until t_max.
+        restTime  = maxRunningHours + 1 - time + 1;                        % Time left until t_max.
         endFR     = FailureRateOverTimePerComponent(i, time);              % Value of failure-rate at end of previous maintenance cycle, and start of new maintenance cycle.
         m2        = tasks{id, 9};                                          % m2 parameter, Tsai.
         shift     = endFR + m2 * (0 - endFR);                              % Vertical shift to align failure-rate graphs.

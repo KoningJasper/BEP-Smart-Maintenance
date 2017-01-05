@@ -24,13 +24,20 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
             n          = i - extraYears * 12;
         end
         calYear = currentYear + extraYears;
-        from = prevAddage .* ones(6,7) + 24 * (calendar(calYear, n) - ones(6, 7));
-        to   = prevAddage .* ones(6,7) + 24 * calendar(calYear, n);
-        %cal  = calendar(calYear, n);
+        
+        c = calendar(calYear, n);
+        
+        from = prevAddage .* ones(6,7) + 24 * (c - ones(6, 7));
+        to   = prevAddage .* ones(6,7) + 24 * c;
+        
         calTasks = cell(6,7);
         % Itterate through calendar
         for x = 1:7
             for y=1:6
+                if(c(y,x) == 0)
+                    continue;
+                end
+                
                 dayFrom = from(y, x);
                 dayTo   = to(y, x);
                 [tak, execution] = find(startCalTimes >= dayFrom && startCalTimes <= dayTo);
