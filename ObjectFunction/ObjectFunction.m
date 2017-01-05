@@ -13,6 +13,7 @@ no_tasks      = size(tasks, 1);
 % Pre-alloc %
 maintCalStart         = zeros(no_tasks, 1);     % Start times of maintenance, per task, in calendar hours.
 endTimeMaintenance    = cell(no_components, no_tasks);      % EndTimes of maintenance, per component, in running hours.
+endTimeMaintenance(:,:) = {0};
 endTimeCalendar       = zeros(no_components, no_tasks);     % EndTimes of maintenance, per component, in calendar hours.
 noComponentMainte     = ones(no_components, 1);
 maintTimePerComponent = zeros(no_components, 1);
@@ -31,12 +32,19 @@ for i = 1:no_tasks
         no_executed_maintenance = 1;
     end
     
-    for j = 1:no_executed_maintenance
+    j = 1;
+    while j <= no_executed_maintenance
+        component_id = tasks{i, 7};
         % Find time to execute maintenance based on running hours tally.
-        runningHoursToFind = floor(j*runningHoursMaintenance(i));
+        runningHoursToFind = floor(runningHoursMaintenance(i));
+        if(j > 1)
+            runningHoursToFind = floor(endTimeMaintenance{i, j - 1}(1) + j*runningHoursMaintenance(i));
+        end
+        if(runningHoursToFind > maxRunningHours)
+            runningHoursToFind = maxRunningHours;
+        end
         t = find(runningHours == runningHoursToFind);
         t = t(end); % Only get last one.
-        component_id = tasks{i, 7};
         
         if(t <= 1)
             t = 1;
@@ -63,9 +71,9 @@ for i = 1:no_tasks
                 no_executed_maintenance = no_executed_maintenance + 1;
                 
                 if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint)
-                    ideal = maxCalendarTimeSinceMaint;
+                    ideal = t + maxCalendarTimeSinceMaint;
                 elseif(timeSinceMaint > maxTimeSinceMaint)
-                    ideal = maxTimeSinceMaint;
+                    ideal = t + maxTimeSinceMaint;
                 end
             end
             
@@ -96,7 +104,7 @@ for i = 1:no_tasks
             end
             
             % Check possible solutions earlier than t;
-            if(t == 0 || forwardBias == false || (calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint))
+            if(isempty(t) || t == 0 || forwardBias == false || (calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint))
                 % Check what is larger absolute or relative bias, and use
                 % the larger one.
                 if(maximumBias * runningHoursMaintenance(i) >= maximumBiasAbsolute)
@@ -132,7 +140,8 @@ for i = 1:no_tasks
         end
         
         % Check if (newly) scheduled maintenance time exceeds given t_max.
-        if(t > t_max)
+        if(isempty(t) || t > t_max)
+            j = j + 1;
             continue;
         end
         
@@ -145,6 +154,8 @@ for i = 1:no_tasks
         endTimeMaintenance{component_id, noComponentMainte(component_id, 1)} = [tRH + 1, i];
         noComponentMainte(component_id, 1) = noComponentMainte(component_id, 1) + 1;
         maintTimePerComponent(component_id, 1) = maintTimePerComponent(component_id, 1) + tasks{i, 4};
+        
+        j = j + 1;
     end
 end
 
@@ -155,6 +166,7 @@ for i = 1:no_components
     % Find end-times of relevant maintenance for component.
     endTimes = endTimeMaintenance(i, :);
     endTimes = endTimes(~cellfun('isempty', endTimes));
+    endTimes = endTimes(~cellfun(@(x) ~x(1), endTimes));
     FailureRateOverTimePerComponent(i, :) = Failure_Rate_Graphs_No_Maintenance(i, :);
     
     sz = size(endTimes, 2);

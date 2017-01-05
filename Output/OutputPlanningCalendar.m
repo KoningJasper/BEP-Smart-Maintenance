@@ -44,10 +44,12 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
                 dayFrom = from(y, x);
                 dayTo   = to(y, x);
                 % Day starts at 24 hours.
-                [tak, execution] = find(startCalTimes >= dayFrom && startCalTimes < dayTo);
+                [tak, execution] = find(startCalTimes >= dayFrom & startCalTimes < dayTo);
                 taks = {};
-                for t=1:size(tak, 1)
-                    taks{t} = Tasks{tak(t), 2};
+                if(~isempty(tak))
+                    for t=1:size(tak, 1)
+                        taks{t} = Tasks{tak(t), 2};
+                    end
                 end
                 calTasks{y,x} = taks;
             end
