@@ -2,6 +2,7 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
     %OUTPUT Summary of this function goes here
     %   Detailed explanation goes here
     
+      
     % Date black magics.
     c            = clock;
     dayCount     = ceil(size(VesselLoc, 1) / t_p / 24);
@@ -10,6 +11,10 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
     dateDiff     = endDate - today;
     diffVect     = datevec(dateDiff);
     monthCount   = diffVect(1,1) * 12 + diffVect(1,2);
+    nowVec       = datevec(datetime());
+    filename     = strcat('Planning_', num2str(nowVec(1)), '_', num2str(nowVec(2)), '_', num2str(nowVec(3)), '_', num2str(nowVec(4)), '_', num2str(nowVec(5)), '_', num2str(round(nowVec(6))), '.xlsx');
+    planningCell = cell(1,7);
+    writeRow     = 1;
     if(diffVect(1,3) > 0)
         monthCount = monthCount + 1;
     end
@@ -34,9 +39,13 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
         to   = prevAddage .* oneCal + 24 * c;
         
         calTasks = cell(6,7);
+        planningCell{writeRow, 1} = strcat(num2str(calYear), ' - ', num2str(n));
+        writeRow = writeRow + 1;
+        planningCell(writeRow, :) = {'M', 'T', 'W', 'T', 'F', 'S', 'S'};
+        writeRow = writeRow + 1;
         % Itterate through calendar
-        for x = 1:7
-            for y=1:6
+        for y = 1:6
+            for x=1:7
                 if(c(y,x) == 0)
                     continue;
                 end
@@ -44,7 +53,7 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
                 dayFrom = from(y, x);
                 dayTo   = to(y, x);
                 % Day starts at 24 hours.
-                [tak, execution] = find(startCalTimes >= dayFrom & startCalTimes < dayTo);
+                [tak, ~] = find(startCalTimes >= dayFrom & startCalTimes < dayTo);
                 taks = {};
                 if(~isempty(tak))
                     for t=1:size(tak, 1)
@@ -52,7 +61,9 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
                     end
                 end
                 calTasks{y,x} = taks;
+                planningCell{writeRow, x} = strjoin({num2str(c(y,x)) strjoin(taks, char(10))}, char(10));
             end
+            writeRow = writeRow + 1;
         end
         disp('===========================');
         disp([num2str(calYear), ' - ', num2str(n)]);
@@ -62,4 +73,5 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
         % direction.)
         prevAddage = max(max(to));
     end
+    xlswrite(filename, planningCell);
 end
