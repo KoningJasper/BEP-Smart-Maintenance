@@ -1,4 +1,4 @@
-function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent, maintCalStart, endTimeMaintenance] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours)
+function [totalCost, Cost_CM, Cost_PM, FailureRateOverTimePerComponent, maintCalStart, endTimeMaintenance] = ObjectFunction(Failure_Rate_Per_Task, Failure_Rate_Graphs_No_Maintenance, input, t_max, t_p, components, tasks, vesselLocation, forwardBias, maximumBias, maximumBiasAbsolute, costPerManhour, penaltyCost, timeFactorAtSea, runningHours, availableDuration)
 % PARAMS
 % bool forwardBias = true geeft wanneer de oplossing niet kan wordt er
 % eerst gezocht naar oplossing die verder weg zijn niet dichterbij. Bij
@@ -23,7 +23,7 @@ SignificanceIndices   = cell2mat(components(:, 5));
 
 
 %% Pre-check 
-maxRunningHours = runningHours(end);
+maxRunningHours         = runningHours(end);
 runningHoursMaintenance = cell2mat(input) .* cell2mat(tasks(:, 6));        % convert ratio to running hours for maintenance (h)
 for i = 1:no_tasks
     no_executed_maintenance = floor(maxRunningHours/runningHoursMaintenance(i));
@@ -131,7 +131,7 @@ for i = 1:no_tasks
                 end
                 
                 endTime = min([maxBias, maxCal, maxRunning]); % Select the minimum of the maximum deviations.
-                t = findMaintenanceTime(ht, endTime, ideal, t_p, vesselLocation, tasks{i, 4}, reqLocation); % Find a new schedule time.
+                t = findMaintenanceTime(ht, endTime, ideal, tasks{i, 4}, reqLocation, availableDuration); % Find a new schedule time.
             end
             
             % Check possible solutions earlier than t;
@@ -142,18 +142,28 @@ for i = 1:no_tasks
                     % Establish maxima
                     % Not first maintenance.
                     if((1 + maximumBias) * runningHoursMaintenance(i) >= maximumBiasAbsolute)
-                        rhsToFind = floor(runningHours(ht) - (1 + maximumBias) * runningHoursMaintenance(i));
+                        rhsToFind = floor(runningHours(maintCalStart(i, j - 1)) - (1 - maximumBias) * runningHoursMaintenance(i));
                     else
-                        rhsToFind = floor(runningHours(ht) - runningHoursMaintenance(i) + maximumBiasAbsolute);
+                        rhsToFind = floor(runningHours(maintCalStart(i, j - 1)) + runningHoursMaintenance(i) - maximumBiasAbsolute);
                     end
                     ts = find(runningHours >= rhsToFind);
                     if(size(ts, 1) >= 1)
                         maxBias = ts(1);
                     else
-                        maxBias = realmax('single');
+                        maxBias = runningHours(maintCalStart(i, j - 1));
                     end
                 else
-                    maxBias = 0;
+                    if((1 + maximumBias) * runningHoursMaintenance(i) >= maximumBiasAbsolute)
+                        rhsToFind = floor((1 - maximumBias) * runningHoursMaintenance(i));
+                    else
+                        rhsToFind = floor(runningHoursMaintenance(i) - maximumBiasAbsolute);
+                    end
+                    ts = find(runningHours >= rhsToFind);
+                    if(size(ts, 1) >= 1)
+                        maxBias = ts(1);
+                    else
+                        maxBias = 0;
+                    end
                 end
                 startTime = maxBias; % min([maxBias]);
                 endTime   = ht;
@@ -176,7 +186,7 @@ for i = 1:no_tasks
                         endTime = lastMaint + maxCalendarTimeSinceMaint;
                     end
                 end
-                t = findMaintenanceTime(startTime + 1, endTime, ideal, t_p, vesselLocation, tasks{i,4}, reqLocation);
+                t = findMaintenanceTime(startTime + 1, endTime, ideal, tasks{i,4}, reqLocation, availableDuration);
             end
             
             % Check if new solution is not found.
@@ -209,6 +219,7 @@ end
 %% Integrate over Time 
 PartCostPerComponent = zeros(no_components, 1);
 FailureRateOverTimePerComponent = zeros(no_components, maxRunningHours + 1);
+componentFailures = zeros(no_components, 1);
 for i = 1:no_components
     % Find end-times of relevant maintenance for component.
     endTimes = endTimeMaintenance(i, :);
@@ -216,15 +227,13 @@ for i = 1:no_components
     endTimes = endTimes(~cellfun(@(x) ~x(1), endTimes));
     FailureRateOverTimePerComponent(i, :) = Failure_Rate_Graphs_No_Maintenance(i, :);
     
-    sz = size(endTimes, 2);
-    times = zeros(1, sz);
-    ids   = zeros(1, sz);
-    for n=1:sz
-        times(n) = endTimes{1, n}(1);
-        ids(n)   = endTimes{1, n}(2);
-    end
+    % Separate ids and times.
+    ends  = [endTimes{1, :}];
+    lt    = length(ends);
+    times = ends(1:2:lt);
+    ids   = ends(2:2:lt);
     
-    for t = 1:sz
+    for t = 1:(lt / 2)
         time = times(t);
         id   = ids(t);
         
@@ -241,16 +250,13 @@ for i = 1:no_components
         FailureRateOverTimePerComponent(i, time:end) = Failure_Rate_Per_Task(id, 1:restTime) + shift;
         PartCostPerComponent(i) = PartCostPerComponent(i) + tasks{id, 10}; % Add part costs.
     end
+    
+    % Find total number of failures per component by integrating Failure-rate
+    % of the component.
+    componentFailures(i) = trapz(FailureRateOverTimePerComponent(i, :));   % Integrate
 end
 
 %% Find total cost.
-
-% Find total number of failures per component by integrating Failure-rate
-% of the component.
-componentFailures = zeros(no_components, 1);
-for i=1:no_components
-    componentFailures (i) = trapz(FailureRateOverTimePerComponent(i, :));   % Integrate
-end
 TotalSignificance = sum(SignificanceIndices);
 
 Cost_CM   = SignificanceIndices ./ TotalSignificance .* FailureRepairTimes .* componentFailures .* timeFactorAtSea .* penaltyCost + componentFailures .* cell2mat(components(:,7)); 

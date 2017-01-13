@@ -29,9 +29,12 @@ exceedComponentMax      = false;                                                
 disp('Reading excel data.');
 Components              = DataReader('Data/Components.xls');                      % Reads the component that are pressent in the symstem.
 Tasks                   = DataReader('Data/Tasks.xls');                           % Reads the task taht need to be planed.
+Tasks(:, 5) = cellfun(@(x) x*max_input_value, Tasks(:, 5), 'un', 0);
+Tasks(:, 6) = cellfun(@(x) x*max_input_value, Tasks(:, 6), 'un', 0);
 VesselLoc               = SailingScheduleGenerator(t_max,t_p);                    % Reads the sailing schedule of the vessel to determind its location(port dock sailing)
 runningHours            = GetRunningHoursTally(VesselLoc, t_p);
 maxRunningHours         = runningHours(end);
+availableDuration       = BuildAvailableDuration(VesselLoc);
 
 %% Setup
 disp('Initializing');
@@ -65,7 +68,7 @@ if(noCores > 1 && noRuns >= 1000)
     parfor r=1:noRuns
         % Generate random input intervals for each of the tasks.
         inputs = GenerateRandomInput(min_input_value, max_input_value, Tasks);
-        [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
+        [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours, availableDuration);
 
         % Write results
         SaveResults(strcat('Results/', 'run_', num2str(r), '.mat'), {totalCosts Cost_CM Cost_PM FRPerCompOT startTimes endTimes inputs'});
@@ -77,7 +80,7 @@ else
     for r=1:noRuns
         % Generate random input intervals for each of the tasks.
         inputs = GenerateRandomInput(min_input_value, max_input_value, Tasks);
-        [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
+        [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours, availableDuration);
 
         % Write results
         SaveResults(strcat('Results/', 'run_', num2str(r), '.mat'), {totalCosts Cost_CM Cost_PM FRPerCompOT startTimes endTimes inputs'});
@@ -86,6 +89,7 @@ else
     end
 end
 close(hbar);
+close all;
 disp(['Monte-Carlo simulation executed in ', num2str(toc(start_output)), 's']);     %stop timmer for executions time MC and dislpay in workspace.
   
 % Extract best result
