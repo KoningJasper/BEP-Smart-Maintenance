@@ -14,6 +14,10 @@ noCores                 = input('Number of logical CPU cores to run on: ');     
 noRuns                  = input('number of simulations to excecute: ');         % Number of MonteCarlo runs.
 t_max                   = input('schedule time (h): ');                         % Maximum simulation time (h(if t_p is 1)).
 
+disp('Define search window, with 1 equaling the warranty limit: ');
+min_input_value = input('Search window start (0-1; 0.8 recommended): ');
+max_input_value = input('Search window end (1-3; 2.5 recommended): ');
+
 % Parameters
 t_p                     = 1;                                                     % Time Step (h)
 margin_MC               = 0.5;                                                   % Margin in planning in % van gevonden planning.
@@ -26,9 +30,6 @@ disp('Reading excel data.');
 Components              = DataReader('Data/Components.xls');                      % Reads the component that are pressent in the symstem.
 Tasks                   = DataReader('Data/Tasks.xls');                           % Reads the task taht need to be planed.
 VesselLoc               = SailingScheduleGenerator(t_max,t_p);                    % Reads the sailing schedule of the vessel to determind its location(port dock sailing)
-%VesselLoc               = ones(50, 2);
-% VesselLoc               = [zeros(6000, 1) zeros(6000,1)];
-% t_max                   = size(VesselLoc, 1);
 runningHours            = GetRunningHoursTally(VesselLoc, t_p);
 maxRunningHours         = runningHours(end);
 
@@ -43,7 +44,7 @@ FR0   = ConstructFailureRateGraphsNoMaintenance(maxRunningHours, Components);   
 
 %% Monte-Carlo (MC)
 % Setup parallel cluster (to reduce running time of the program, MC simulation is run on sevreal cores)
-if(noCores > 1)
+if(noCores > 1 && noRuns >= 1000)
     delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
     localCluster            = parcluster('local');
     localCluster.NumWorkers = noCores;
@@ -59,10 +60,11 @@ results         = cell(noRuns, 1);
 
 % Execute objective function(MC) to find objective-parameters.
 hbar = parfor_progressbar(noRuns, 'Executing Monte-Carlo Simulations...');
-if(noCores > 1)
+if(noCores > 1 && noRuns >= 1000)
+    % Execute in parallel.
     parfor r=1:noRuns
         % Generate random input intervals for each of the tasks.
-        inputs = GenerateRandomInput(0.9999999999999999, Tasks);
+        inputs = GenerateRandomInput(min_input_value, max_input_value, Tasks);
         [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
 
         % Write results
@@ -71,9 +73,10 @@ if(noCores > 1)
         hbar.iterate(1);
     end
 else
+    % Execute in sequence.
     for r=1:noRuns
         % Generate random input intervals for each of the tasks.
-        inputs = GenerateRandomInput(0.9999999999999999, Tasks);
+        inputs = GenerateRandomInput(min_input_value, max_input_value, Tasks);
         [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
 
         % Write results
