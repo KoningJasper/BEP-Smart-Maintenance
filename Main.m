@@ -67,7 +67,7 @@ if(noCores > 1 && noRuns >= 1000)
     % Execute in parallel.
     parfor r=1:noRuns
         % Generate random input intervals for each of the tasks.
-        inputs = GenerateRandomInput(min_input_value, max_input_value, Tasks);
+        inputs = GenerateRandomInput(min_input_value, 1, Tasks);
         [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours, availableDuration);
 
         % Write results
@@ -79,7 +79,7 @@ else
     % Execute in sequence.
     for r=1:noRuns
         % Generate random input intervals for each of the tasks.
-        inputs = GenerateRandomInput(min_input_value, max_input_value, Tasks);
+        inputs = GenerateRandomInput(min_input_value, 1, Tasks);
         [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours, availableDuration);
 
         % Write results
