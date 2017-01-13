@@ -12,7 +12,7 @@ PCH                     = input('Penalty cost per hour of downtime: ');         
 TFC                     = input('Time factor for maintenance at sea: ');        % Time factor for maintenance while at sea, time factor at sea(TFC).
 noCores                 = input('Number of logical CPU cores to run on: ');     % Number of logical CPU cores.
 noRuns                  = input('number of simulations to excecute: ');         % Number of MonteCarlo runs.
-%t_max                   = input('schedule time (h): ');                         % Maximum simulation time (h(if t_p is 1)).
+t_max                   = input('schedule time (h): ');                         % Maximum simulation time (h(if t_p is 1)).
 
 % Parameters
 t_p                     = 1;                                                     % Time Step (h)
@@ -25,10 +25,10 @@ exceedComponentMax      = false;                                                
 disp('Reading excel data.');
 Components              = DataReader('Data/Components.xls');                      % Reads the component that are pressent in the symstem.
 Tasks                   = DataReader('Data/Tasks.xls');                           % Reads the task taht need to be planed.
-%VesselLoc               = SailingScheduleGenerator(t_max,t_p);                    % Reads the sailing schedule of the vessel to determind its location(port dock sailing)
+VesselLoc               = SailingScheduleGenerator(t_max,t_p);                    % Reads the sailing schedule of the vessel to determind its location(port dock sailing)
 %VesselLoc               = ones(50, 2);
-VesselLoc               = [zeros(6000, 1) zeros(6000,1)];
-t_max                   = size(VesselLoc, 1);
+% VesselLoc               = [zeros(6000, 1) zeros(6000,1)];
+% t_max                   = size(VesselLoc, 1);
 runningHours            = GetRunningHoursTally(VesselLoc, t_p);
 maxRunningHours         = runningHours(end);
 
@@ -43,11 +43,13 @@ FR0   = ConstructFailureRateGraphsNoMaintenance(maxRunningHours, Components);   
 
 %% Monte-Carlo (MC)
 % Setup parallel cluster (to reduce running time of the program, MC simulation is run on sevreal cores)
-delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
-localCluster            = parcluster('local');
-localCluster.NumWorkers = noCores;
-saveProfile(localCluster);
-parpool(noCores);
+if(noCores > 1)
+    delete(gcp('nocreate'));                                                    % deleting existing parallelpool 
+    localCluster            = parcluster('local');
+    localCluster.NumWorkers = noCores;
+    saveProfile(localCluster);
+    parpool(noCores);
+end
 
 % Make a empty matrix and preperations for MC
 disp('Starting Monte-Carlo simulation');
@@ -57,15 +59,28 @@ results         = cell(noRuns, 1);
 
 % Execute objective function(MC) to find objective-parameters.
 hbar = parfor_progressbar(noRuns,'Please wait...');
-parfor r=1:noRuns
-    % Generate random input intervals for each of the tasks.
-    inputs = GenerateRandomInput(0.8, Tasks);
-    [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
-    
-    % Write results
-    SaveResults(strcat('Results/', 'run_', num2str(r), '.mat'), {totalCosts Cost_CM Cost_PM FRPerCompOT startTimes endTimes inputs'});
-    results(r, :) = {totalCosts};
-    hbar.iterate(1);
+if(noCores > 1)
+    parfor r=1:noRuns
+        % Generate random input intervals for each of the tasks.
+        inputs = GenerateRandomInput(0.9999999999999999, Tasks);
+        [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
+
+        % Write results
+        SaveResults(strcat('Results/', 'run_', num2str(r), '.mat'), {totalCosts Cost_CM Cost_PM FRPerCompOT startTimes endTimes inputs'});
+        results(r, :) = {totalCosts};
+        hbar.iterate(1);
+    end
+else
+    for r=1:noRuns
+        % Generate random input intervals for each of the tasks.
+        inputs = GenerateRandomInput(0.9999999999999999, Tasks);
+        [totalCosts, Cost_CM, Cost_PM, FRPerCompOT, startTimes, endTimes] = ObjectFunction(FRT, FR0, inputs, t_max, t_p, Components, Tasks, VesselLoc, allowForward, margin_MC, margin_MC_abs, MCH, PCH, TFC, runningHours);
+
+        % Write results
+        SaveResults(strcat('Results/', 'run_', num2str(r), '.mat'), {totalCosts Cost_CM Cost_PM FRPerCompOT startTimes endTimes inputs'});
+        results(r, :) = {totalCosts};
+        hbar.iterate(1);
+    end
 end
 close(hbar);
 disp(['Monte-Carlo simulation executed in ', num2str(toc(start_output)), 's']);     %stop timmer for executions time MC and dislpay in workspace.

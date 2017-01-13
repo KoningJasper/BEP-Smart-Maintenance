@@ -11,11 +11,11 @@ no_components = size(components, 1);
 no_tasks      = size(tasks, 1);
 
 % Pre-alloc %
-maintCalStart         = zeros(no_tasks, 1);     % Start times of maintenance, per task, in calendar hours.
+maintCalStart         = zeros(no_tasks, 0);     % Start times of maintenance, per task, in calendar hours.
 endTimeTask           = zeros(no_tasks, 1);     % Last end time of maintenance for this task, in running hours.
-endTimeMaintenance    = cell(no_components, 100);      % EndTimes of maintenance, per component, in running hours.
+endTimeMaintenance    = cell(no_components, 1);      % EndTimes of maintenance, per component, in running hours.
 endTimeMaintenance(:,:) = {0};
-endTimeCalendar       = zeros(no_components, no_tasks);     % EndTimes of maintenance, per component, in calendar hours.
+endTimeCalendar       = zeros(no_components, 1);     % EndTimes of maintenance, per component, in calendar hours.
 noComponentMainte     = ones(no_components, 1);
 maintTimePerComponent = zeros(no_components, 1);
 FailureRepairTimes    = cell2mat(components(:, 6));
@@ -84,54 +84,99 @@ for i = 1:no_tasks
             
             % Check possible solutions later than t;
             if(forwardBias == true && calendarTimeSinceMaint < maxCalendarTimeSinceMaint && timeSinceMaint < maxTimeSinceMaint)
-                % Check what is larger absolute or relative bias, and use
-                % the larger one.
-                if(maximumBias * runningHoursMaintenance(i) >= maximumBiasAbsolute)
-                    endTime = (1 + maximumBias) * runningHoursMaintenance(i);
-                else
-                    endTime = runningHoursMaintenance(i) + maximumBiasAbsolute;
-                end
-                               
                 if(j > 1)
-                    if(endTime >= (maintCalStart(i, j-1) + tasks{i, 6}))
-                        endTime = tasks{i, 6};
+                    % Establish maxima
+                    % Not first maintenance.
+                    if((1 + maximumBias) * runningHoursMaintenance(i) >= maximumBiasAbsolute)
+                        rhsToFind = floor(runningHours(maintCalStart(i, j - 1)) + (1 + maximumBias) * runningHoursMaintenance(i));
+                    else
+                        rhsToFind = floor(runningHours(maintCalStart(i, j - 1)) + runningHoursMaintenance(i) + maximumBiasAbsolute);
                     end
-                    endTime = endTime + maintCalStart(i, j - 1);
+                    ts = find(runningHours >= rhsToFind);
+                    if(size(ts, 1) >= 1)
+                        maxBias = ts(1);
+                    else
+                        maxBias = realmax('single');
+                    end
+                    maxCal = maintCalStart(i, j - 1) + maxCalendarTimeSinceMaint;
+                    rhsToFind = runningHours(maintCalStart(i, j - 1)) + maxTimeSinceMaint;
+                    ts = find(runningHours >= rhsToFind);
+                    if(size(ts, 1) >= 1)
+                        maxRunning = ts(1);
+                    else
+                        maxRunning = realmax('single');
+                    end
                 else
-                    if(endTime >= tasks{i, 6})
-                        endTime = tasks{i, 6};
+                    % Initial maxima
+                    % First maintenance.
+                    if((1 + maximumBias) * runningHoursMaintenance(i) >= maximumBiasAbsolute)
+                        rhsToFind = floor((1 + maximumBias) * runningHoursMaintenance(i));
+                    else
+                        rhsToFind = floor(runningHoursMaintenance(i) + maximumBiasAbsolute);
+                    end
+                    ts = find(runningHours >= rhsToFind);
+                    if(size(ts, 1) >= 1)
+                        maxBias = ts(1);
+                    else
+                        maxBias = realmax('single');
+                    end
+                    maxCal = maxCalendarTimeSinceMaint;
+                    rhsToFind = maxTimeSinceMaint;
+                    ts = find(runningHours >= rhsToFind);
+                    if(size(ts, 1) >= 1)
+                        maxRunning = ts(1);
+                    else
+                        maxRunning = realmax('single');
                     end
                 end
-                t = findMaintenanceTime(ht, endTime, ideal, t_p, vesselLocation, tasks{i, 4}, reqLocation);
+                
+                endTime = min([maxBias, maxCal, maxRunning]); % Select the minimum of the maximum deviations.
+                t = findMaintenanceTime(ht, endTime, ideal, t_p, vesselLocation, tasks{i, 4}, reqLocation); % Find a new schedule time.
             end
             
             % Check possible solutions earlier than t;
             if(isempty(t) || t == 0 || forwardBias == false || (calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint))
                 % Check what is larger absolute or relative bias, and use
                 % the larger one.
-                if(maximumBias * runningHoursMaintenance(i) >= maximumBiasAbsolute)
-                    startTime = floor((1 - maximumBias) * runningHoursMaintenance(i));
-                else
-                    startTime = runningHoursMaintenance(i) - maximumBiasAbsolute;
-                end
-                
-                if(startTime <= 0)
-                    startTime = 0;
-                end
-                
                 if(j > 1)
-                    startTime = floor(startTime + maintCalStart(i, j - 1));
+                    % Establish maxima
+                    % Not first maintenance.
+                    if((1 + maximumBias) * runningHoursMaintenance(i) >= maximumBiasAbsolute)
+                        rhsToFind = floor(runningHours(ht) - (1 + maximumBias) * runningHoursMaintenance(i));
+                    else
+                        rhsToFind = floor(runningHours(ht) - runningHoursMaintenance(i) + maximumBiasAbsolute);
+                    end
+                    ts = find(runningHours >= rhsToFind);
+                    if(size(ts, 1) >= 1)
+                        maxBias = ts(1);
+                    else
+                        maxBias = realmax('single');
+                    end
                 else
-                    if(startTime <= 0)
-                        startTime = 0;
+                    maxBias = 0;
+                end
+                startTime = maxBias; % min([maxBias]);
+                endTime   = ht;
+                
+                % Adjust endTime if it exceeds maximum.
+                if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint || timeSinceMaint > maxTimeSinceMaint)
+                    if(timeSinceMaint > maxTimeSinceMaint)
+                        ts = find(runningHours <= maxTimeSinceMaint);
+                        if(size(ts, 1) >= 1)
+                            endTime = ts(end);
+                        end
+                    end
+                    
+                    lastMaint = 0;
+                    if(j > 1)
+                        lastMaint = endTimeCalendar(component_id, j - 1);
+                    end
+                    
+                    if((endTime - lastMaint) > maxCalendarTimeSinceMaint)
+                        endTime = lastMaint + maxCalendarTimeSinceMaint;
                     end
                 end
-                
-                if(calendarTimeSinceMaint > maxCalendarTimeSinceMaint)
-                    t = findMaintenanceTime(startTime, (ht - calendarTimeSinceMaint + maxCalendarTimeSinceMaint), ideal, t_p, vesselLocation, tasks{i,4}, reqLocation);
-                else
-                    t = findMaintenanceTime(startTime, ht, ideal, t_p, vesselLocation, tasks{i,4}, reqLocation);
-                end
+                t = findMaintenanceTime(startTime + 1, endTime, ideal, t_p, vesselLocation, tasks{i,4}, reqLocation);
             end
             
             % Check if new solution is not found.
