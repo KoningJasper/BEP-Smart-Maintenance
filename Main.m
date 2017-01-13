@@ -58,7 +58,7 @@ numberOfTasks   = size(Tasks, 1);
 results         = cell(noRuns, 1);
 
 % Execute objective function(MC) to find objective-parameters.
-hbar = parfor_progressbar(noRuns,'Please wait...');
+hbar = parfor_progressbar(noRuns, 'Executing Monte-Carlo Simulations...');
 if(noCores > 1)
     parfor r=1:noRuns
         % Generate random input intervals for each of the tasks.
