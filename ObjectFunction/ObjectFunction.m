@@ -226,9 +226,9 @@ for i = 1:no_components
     endTimes = endTimes(~cellfun('isempty', endTimes));
     endTimes = endTimes(~cellfun(@(x) ~x(1), endTimes));
     FailureRateOverTimePerComponent(i, :) = Failure_Rate_Graphs_No_Maintenance(i, :);
-    
+       
     % Separate ids and times.
-    ends  = [endTimes{1, :}];
+    ends  = [endTimes{:}];
     lt    = length(ends);
     times = ends(1:2:lt);
     ids   = ends(2:2:lt);
