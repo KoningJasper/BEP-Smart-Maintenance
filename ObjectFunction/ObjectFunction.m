@@ -256,9 +256,7 @@ for i = 1:no_components
     componentFailures(i) = trapz(FailureRateOverTimePerComponent(i, :));   % Integrate
 end
 
-%% Find total cost.
-TotalSignificance = sum(SignificanceIndices);
-
-Cost_CM   = SignificanceIndices ./ TotalSignificance .* FailureRepairTimes .* componentFailures .* timeFactorAtSea .* penaltyCost + componentFailures .* cell2mat(components(:,7)); 
+% Find total cost.
+Cost_CM   = componentFailures .* ((cell2mat(components(:, 6))) .* (SignificanceIndices .* penaltyCost .* timeFactorAtSea + FailureRepairTimes .* costPerManhour) + cell2mat(components(:,7))); 
 Cost_PM   = maintTimePerComponent .* costPerManhour + PartCostPerComponent;
 totalCost = sum(Cost_CM + Cost_PM);
