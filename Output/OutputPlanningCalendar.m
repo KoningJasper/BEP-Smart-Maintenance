@@ -53,7 +53,7 @@ function [ output_args ] = OutputPlanningCalendar(startCalTimes, t_p, VesselLoc,
                 dayFrom = from(y, x);
                 dayTo   = to(y, x);
                 % Day starts at 24 hours.
-                [tak, ~] = find(startCalTimes >= dayFrom & startCalTimes < dayTo);
+                [tak, ~] = find(startCalTimes >= dayFrom & startCalTimes < dayTo & startCalTimes ~= 0);
                 taks = {};
                 if(~isempty(tak))
                     for t=1:size(tak, 1)
